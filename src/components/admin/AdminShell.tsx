@@ -29,7 +29,7 @@ export function AdminShell({ children, userEmail }: Props) {
       <header className={styles.topbar}>
         <div className={styles.brand}>
           <span className={styles.brandMark}>φ</span>
-          <span>Phystrainer · Админ</span>
+          <span>яТренер · Админ</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {userEmail ? (

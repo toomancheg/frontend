@@ -19,6 +19,13 @@ const NAV = [
   { href: "/settings", label: "Настройки", short: "Ещё", icon: "⚙" },
 ] as const;
 
+const SUBJECT_META: Record<string, { mark: string; name: string }> = {
+  physics: { mark: "φ", name: "Физика" },
+  math: { mark: "∑", name: "Математика" },
+  cs: { mark: "⌘", name: "Информатика" },
+  chemistry: { mark: "⚗", name: "Химия" },
+};
+
 type Props = {
   children: ReactNode;
   title?: string;
@@ -37,14 +44,15 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
   const subjectPrefix = getSubjectPrefixFromPathname(pathname);
   const hrefInSubject = (href: string) => (subjectPrefix ? `${subjectPrefix}${href}` : href);
   const currentSubject = subjectPrefix ? subjectPrefix.slice(1) : "";
+  const subjectMeta = SUBJECT_META[currentSubject || "physics"] ?? SUBJECT_META.physics;
 
   return (
     <div className={styles.root}>
       <header className={styles.topbar}>
         <div className={`pt-container ${styles.topInner}`}>
           <Link href={hrefInSubject("/dashboard")} className={styles.logo}>
-            <span className={styles.logoMark}>φ</span>
-            <span>Phystrainer</span>
+            <span className={styles.logoMark}>{subjectMeta.mark}</span>
+            <span>{subjectMeta.name} · яТренер</span>
           </Link>
 
           <div className={`${styles.searchWrap} pt-hide-mobile`}>
@@ -71,7 +79,7 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
                   /^\/([a-z][a-z0-9_-]*)\/(dashboard|theory|practice|exam|progress|subscription|settings|admin)(\/|$)/i,
                   `/${next}/$2$3`
                 );
-                router.push(replaced);
+                router.push(replaced === normalized ? `/${next}/dashboard` : replaced);
               }}
               aria-label="Предмет"
               style={{ maxWidth: 190 }}

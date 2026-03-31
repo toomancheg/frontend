@@ -10,12 +10,39 @@
   --pt-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.12);
   --pt-shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.18);
 
-  --pt-accent: #6366f1;
-  --pt-accent-hover: #4f46e5;
+  /* Default (physics) */
+  --pt-accent: #3b82f6;
+  --pt-accent-hover: #2563eb;
+  --pt-accent-rgb: 59, 130, 246;
   --pt-success: #10b981;
   --pt-physics: #f59e0b;
 
   --pt-max: 1200px;
+}
+
+/* Subject color coding */
+html[data-subject="physics"] {
+  --pt-accent: #3b82f6;
+  --pt-accent-hover: #2563eb;
+  --pt-accent-rgb: 59, 130, 246;
+}
+
+html[data-subject="math"] {
+  --pt-accent: #a855f7;
+  --pt-accent-hover: #9333ea;
+  --pt-accent-rgb: 168, 85, 247;
+}
+
+html[data-subject="cs"] {
+  --pt-accent: #22c55e;
+  --pt-accent-hover: #16a34a;
+  --pt-accent-rgb: 34, 197, 94;
+}
+
+html[data-subject="chemistry"] {
+  --pt-accent: #f97316;
+  --pt-accent-hover: #ea580c;
+  --pt-accent-rgb: 249, 115, 22;
 }
 
 /* Светлая тема */
@@ -192,14 +219,14 @@ a:hover {
 
 .pt-btn-primary {
   color: #fff;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+  background: linear-gradient(135deg, var(--pt-accent) 0%, var(--pt-accent-hover) 100%);
+  box-shadow: 0 4px 14px rgba(var(--pt-accent-rgb), 0.35);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .pt-btn-primary:not(:disabled):hover {
     filter: brightness(1.08);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+    box-shadow: 0 6px 20px rgba(var(--pt-accent-rgb), 0.45);
     transform: translateY(-1px);
   }
 }
@@ -294,7 +321,7 @@ a:hover {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--pt-accent), #818cf8);
+  background: linear-gradient(90deg, var(--pt-accent), color-mix(in srgb, var(--pt-accent) 55%, #ffffff));
   transition: width 0.6s ease;
 }
 

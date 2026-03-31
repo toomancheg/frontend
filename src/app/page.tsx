@@ -19,7 +19,7 @@ export default function Home() {
         }}
       >
         <Link href="/" className="pt-heading" style={{ fontWeight: 800, color: "var(--pt-text)" }}>
-          φ Phystrainer
+          φ яТренер
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <ThemeToggle />
@@ -111,7 +111,7 @@ export default function Home() {
 
       <section className={styles.section} style={{ background: "var(--pt-surface-2)" }}>
         <div className="pt-container">
-          <h2 className={styles.sectionTitle}>Почему Phystrainer</h2>
+          <h2 className={styles.sectionTitle}>Почему яТренер</h2>
           <div className={styles.sectionSub}>
             <p>
               Представьте: вы решаете задачу, но не тупите в одиночестве и не смотрите готовый ответ. Рядом есть мудрый наставник с
@@ -177,11 +177,11 @@ export default function Home() {
             <span key={c}>{c}</span>
           ))}
         </div>
-        <p className="pt-muted">Уже 5000+ учеников готовятся с Phystrainer</p>
+        <p className="pt-muted">Уже 5000+ учеников готовятся с яТренер</p>
       </div>
 
       <footer className={`pt-container ${styles.footer}`}>
-        © {new Date().getFullYear()} Phystrainer · Физика с ИИ-наставником
+        © {new Date().getFullYear()} яТренер · Физика с ИИ-наставником
       </footer>
     </>
   );

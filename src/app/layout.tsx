@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { SubjectThemeSync } from "@/components/theme/SubjectThemeSync";
 
 import "./globals.css";
 
@@ -24,7 +25,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Phystrainer — физика с ИИ-наставником",
+  title: "яТренер — физика с ИИ-наставником",
   description: "Интерактивные задачи, мгновенная проверка и персональный план обучения",
 };
 
@@ -36,7 +37,10 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className={`${inter.variable} ${manrope.variable} ${jetbrains.variable} ${inter.className}`}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <SubjectThemeSync />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
