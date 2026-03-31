@@ -1,0 +1,96 @@
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.section {
+  padding: 22px;
+  margin-bottom: 16px;
+}
+
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px dashed var(--pt-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--pt-muted);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--pt-surface-2);
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  line-height: 1;
+}
+
+.avatarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hiddenFile {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.okMsg {
+  color: var(--pt-accent);
+  font-size: 0.9rem;
+  margin: 0 0 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--pt-accent);
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

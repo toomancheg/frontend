@@ -1,0 +1,110 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.input,
+.select {
+  background: #232a3b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #e8ecf4;
+  padding: 8px 10px;
+  min-width: 140px;
+}
+
+.btn {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn:hover {
+  filter: brightness(1.05);
+}
+
+.btnGhost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e8ecf4;
+}
+
+.tableWrap {
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.table th {
+  color: #94a3b8;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rowBlocked {
+  opacity: 0.75;
+}
+
+.link {
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.pager {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 16px;
+  color: #e8ecf4;
+}
+
+.err {
+  color: #f87171;
+}

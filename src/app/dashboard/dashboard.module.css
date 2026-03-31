@@ -1,0 +1,162 @@
+.grid {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 1024px) {
+  .topRow {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 20px;
+    align-items: start;
+  }
+}
+
+.welcome {
+  padding: 22px;
+}
+
+.welcome h2 {
+  font-size: 1.35rem;
+  margin-bottom: 6px;
+}
+
+.meta {
+  font-size: 0.95rem;
+  color: var(--pt-muted);
+  margin-bottom: 16px;
+}
+
+.ringWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+}
+
+.ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--pt-accent) calc(var(--pct, 0) * 3.6deg),
+    var(--pt-border) 0
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.ring::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background: var(--pt-card);
+}
+
+.ring span {
+  position: relative;
+  z-index: 1;
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+
+.hScroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hCard {
+  flex: 0 0 min(280px, 85vw);
+  scroll-snap-align: start;
+  padding: 16px;
+}
+
+.hCard h4 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.reco {
+  padding: 20px;
+  border-left: 4px solid var(--pt-accent);
+}
+
+.quick {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .quick {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.quickBtn {
+  padding: 20px;
+  text-align: center;
+  font-weight: 700;
+  border-radius: var(--pt-radius);
+  border: 1px solid var(--pt-border);
+  background: var(--pt-card);
+  cursor: pointer;
+  transition: box-shadow var(--pt-transition), transform var(--pt-transition);
+  font: inherit;
+  color: var(--pt-text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .quickBtn:hover {
+    box-shadow: var(--pt-shadow-md);
+    transform: translateY(-2px);
+  }
+}
+
+.badges {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .badges {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.badge {
+  padding: 14px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px dashed var(--pt-border);
+  opacity: 0.55;
+}
+
+.badge[data-unlocked="true"] {
+  opacity: 1;
+  border-style: solid;
+  border-color: var(--pt-success);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.quote {
+  padding: 20px;
+  text-align: center;
+  font-style: italic;
+  color: var(--pt-muted);
+}
+
+.statErr {
+  color: #ef4444;
+  margin-bottom: 12px;
+}

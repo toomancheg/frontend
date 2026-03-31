@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { apiFetch } from "@/lib/api";
-import { clearTokens, getAccessToken, getRefreshToken } from "@/lib/auth";
-import { buttonStyle, uiStyles } from "@/app/uiStyles";
+import { AppShell } from "@/components/layout/AppShell";
+import { apiFetch, resolveMediaUrl } from "@/lib/api";
+import { clearTokens } from "@/lib/auth";
+import { getDisplayName, setDisplayName } from "@/lib/displayName";
+import { useRequireAuth } from "@/lib/useRequireAuth";
+
+import styles from "./dashboard.module.css";
 
 type UserOut = {
   id: string;
@@ -14,7 +18,15 @@ type UserOut = {
   role: "student" | "admin";
   grade: number;
   program: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  notification_prefs: {
+    training_reminders: boolean;
+    new_tasks: boolean;
+    exam_results: boolean;
+  };
 };
+
 type DashboardStats = {
   solved_tasks: number;
   total_tasks: number;
@@ -23,26 +35,35 @@ type DashboardStats = {
   weak_topics: string[];
 };
 
+const PROGRAM_LABEL: Record<string, string> = {
+  basic: "Базовая",
+  profile: "Профильная",
+  olympiad: "Олимпиадная",
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [greetingName, setGreetingName] = useState("");
 
-  const accessToken = useMemo(() => getAccessToken(), []);
-  const refreshToken = useMemo(() => getRefreshToken(), []);
+  const accessToken = useRequireAuth();
 
   useEffect(() => {
-    if (!accessToken) {
-      router.push("/auth/login");
-      return;
-    }
+    setGreetingName(getDisplayName() ?? "");
+  }, []);
+
+  useEffect(() => {
+    if (!accessToken) return;
 
     (async () => {
       try {
         const me = await apiFetch<UserOut>("/api/auth/me", { token: accessToken });
         setUser(me);
+        const fromDb = me.display_name?.trim();
+        if (fromDb) setDisplayName(fromDb);
         const dashboard = await apiFetch<DashboardStats>("/api/dashboard/stats", { token: accessToken });
         setStats(dashboard);
       } catch (err) {
@@ -52,77 +73,157 @@ export default function DashboardPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [accessToken]);
 
   async function onLogout() {
     try {
-      if (refreshToken) {
-        await apiFetch("/api/auth/logout", {
-          method: "POST",
-          body: { refresh_token: refreshToken },
-        });
-      }
+      await apiFetch("/api/auth/logout", { method: "POST", body: {} });
     } catch {
-      // Logout идемпотентен
+      // идемпотентно
     } finally {
       clearTokens();
       router.push("/auth/login");
     }
   }
 
-  return (
-    <main style={{ ...uiStyles.page, maxWidth: 700 }}>
-      <h1 style={{ marginBottom: 8 }}>Личный кабинет</h1>
+  const pct =
+    stats && stats.total_tasks > 0 ? Math.round((stats.solved_tasks / stats.total_tasks) * 100) : 0;
 
-      {error ? <div style={{ color: "crimson", marginBottom: 12 }}>Не удалось загрузить данные кабинета: {error}</div> : null}
+  const displayName =
+    user?.display_name?.trim() ||
+    greetingName ||
+    (user?.email ? user.email.split("@")[0] : "Ученик");
+
+  const headerAvatar = resolveMediaUrl(user?.avatar_url ?? null);
+
+  return (
+    <AppShell
+      userEmail={user?.email ?? null}
+      userRole={user?.role ?? null}
+      userAvatarUrl={headerAvatar}
+      onLogout={onLogout}
+    >
+      {error ? <div className={styles.statErr}>Не удалось загрузить данные: {error}</div> : null}
 
       {isLoading ? (
-        <div>Загрузка...</div>
+        <div className="pt-card" style={{ padding: 24 }}>
+          <div className="pt-skeleton" style={{ height: 24, width: "40%", marginBottom: 12 }} />
+          <div className="pt-skeleton" style={{ height: 120, width: "100%" }} />
+        </div>
       ) : user ? (
-        <div style={{ display: "grid", gap: 10 }}>
-          <div>
-            <strong>Email:</strong> {user.email}
-          </div>
-          <div>
-            <strong>Роль:</strong> {user.role}
-          </div>
-          <div>
-            <strong>Класс:</strong> {user.grade}
-          </div>
-          <div>
-            <strong>Программа:</strong> {user.program}
+        <div className={styles.grid}>
+          <div className={styles.topRow}>
+            <section className={`pt-card ${styles.welcome}`}>
+              <h2>Привет, {displayName}!</h2>
+              <p className={styles.meta}>
+                Класс: {user.grade} · Программа: {PROGRAM_LABEL[user.program] ?? user.program}
+              </p>
+              <p className="pt-muted" style={{ fontSize: "0.95rem" }}>
+                Прогресс за неделю: решено задач относительно плана.
+              </p>
+            </section>
+            <section className="pt-card">
+              <div className={styles.ringWrap}>
+                <div className={styles.ring} style={{ "--pct": pct } as React.CSSProperties}>
+                  <span>{pct}%</span>
+                </div>
+                <span className="pt-muted" style={{ fontSize: "0.8rem" }}>
+                  Неделя
+                </span>
+              </div>
+            </section>
           </div>
 
-          <button onClick={onLogout} style={{ ...buttonStyle(), marginTop: 14 }}>
-            Выйти
-          </button>
-          <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
-            <Link href="/theory">Теория</Link>
-            <Link href="/practice">Практика</Link>
-            <Link href="/exam">Экзамен</Link>
-          </div>
-          {stats ? (
-            <div style={{ ...uiStyles.mutedCard, marginTop: 16 }}>
-              <div>
-                <strong>Прогресс:</strong> {stats.solved_tasks}/{stats.total_tasks} задач
-              </div>
-              <div>
-                <strong>Темы:</strong> {stats.topics_total}
-              </div>
-              <div>
-                <strong>Сложность:</strong> easy={stats.by_difficulty.easy ?? 0}, medium={stats.by_difficulty.medium ?? 0}, hard=
-                {stats.by_difficulty.hard ?? 0}
-              </div>
-              <div>
-                <strong>Слабые темы:</strong> {stats.weak_topics.length ? stats.weak_topics.join(", ") : "нет"}
-              </div>
+          <section>
+            <h3 className="pt-heading" style={{ fontSize: "1.1rem", marginBottom: 12 }}>
+              Продолжить обучение
+            </h3>
+            <div className={styles.hScroll}>
+              {[
+                { t: "Кинематика", p: 45, icon: "🎯" },
+                { t: "Динамика", p: 20, icon: "⚙" },
+                { t: "Энергия", p: 60, icon: "⚡" },
+              ].map((x) => (
+                <article key={x.t} className={`pt-card pt-card-interactive ${styles.hCard}`}>
+                  <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>{x.icon}</div>
+                  <h4>{x.t}</h4>
+                  <div className="pt-progress" style={{ marginBottom: 12 }}>
+                    <span style={{ width: `${x.p}%` }} />
+                  </div>
+                  <Link href="/theory" className="pt-btn pt-btn-secondary" style={{ width: "100%" }}>
+                    Продолжить
+                  </Link>
+                </article>
+              ))}
             </div>
+          </section>
+
+          <section className={`pt-card ${styles.reco}`}>
+            <h3 className="pt-heading" style={{ fontSize: "1.05rem", marginBottom: 8 }}>
+              Рекомендации ИИ
+            </h3>
+            <p style={{ marginBottom: 14 }}>
+              {stats?.weak_topics?.length
+                ? `На основе твоих ошибок рекомендуем повторить тему «${stats.weak_topics[0]}»`
+                : "Отличная работа! Попробуй мини-экзамен по силе трения."}
+            </p>
+            <Link href="/theory" className="pt-btn pt-btn-primary">
+              Начать
+            </Link>
+          </section>
+
+          <section>
+            <h3 className="pt-heading" style={{ fontSize: "1.1rem", marginBottom: 12 }}>
+              Быстрый старт
+            </h3>
+            <div className={styles.quick}>
+              <Link href="/practice" className={styles.quickBtn}>
+                🎲 Случайная задача
+              </Link>
+              <Link href="/exam" className={styles.quickBtn}>
+                ⚡ Мини-экзамен
+              </Link>
+              <Link href="/theory" className={styles.quickBtn}>
+                🎯 Сложные темы
+              </Link>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="pt-heading" style={{ fontSize: "1.1rem", marginBottom: 12 }}>
+              Достижения
+            </h3>
+            <div className={styles.badges}>
+              {[
+                { id: "1", t: "Первая задача", ok: (stats?.solved_tasks ?? 0) >= 1 },
+                { id: "2", t: "5 подряд", ok: (stats?.solved_tasks ?? 0) >= 5 },
+                { id: "3", t: "Идеальный экзамен", ok: false },
+                { id: "4", t: "10 тем", ok: (stats?.topics_total ?? 0) >= 10 },
+              ].map((b) => (
+                <div key={b.id} className={styles.badge} data-unlocked={b.ok}>
+                  {b.ok ? "✓ " : "○ "}
+                  {b.t}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <p className={`pt-card ${styles.quote}`}>
+            «Физика — это способность удивляться простым вещам» — Ричард Фейнман
+          </p>
+
+          {stats ? (
+            <section className="pt-card" style={{ padding: 18 }}>
+              <p>
+                <strong>Всего:</strong> {stats.solved_tasks}/{stats.total_tasks} задач ·{" "}
+                <strong>Темы:</strong> {stats.topics_total}
+              </p>
+            </section>
           ) : null}
         </div>
       ) : (
-        <div>Профиль не найден. Попробуйте обновить страницу или войти снова.</div>
+        <p>Профиль не найден.</p>
       )}
-    </main>
+    </AppShell>
   );
 }
-

@@ -9,16 +9,20 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "^14.2.35",
+    "katex": "^0.16.40",
+    "next": "^15.5.14",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
-    "eslint-config-next": "^16.2.0",
+    "eslint-config-next": "^15.5.14",
     "typescript": "^5"
   }
 }

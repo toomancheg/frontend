@@ -1,0 +1,48 @@
+.group {
+  display: inline-flex;
+  gap: 0;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--pt-surface-2);
+  border: 1px solid var(--pt-border);
+}
+
+.group button {
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pt-muted);
+  cursor: pointer;
+  transition: background var(--pt-transition), color var(--pt-transition);
+}
+
+.group button:hover {
+  color: var(--pt-text);
+}
+
+.active {
+  background: var(--pt-accent-muted) !important;
+  color: var(--pt-text) !important;
+}
+
+.compact {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--pt-border);
+  background: var(--pt-surface-2);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow var(--pt-transition);
+}
+
+.compact:hover {
+  box-shadow: var(--pt-shadow-md);
+  transform: translateY(-1px);
+}

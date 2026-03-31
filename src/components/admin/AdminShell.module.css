@@ -1,0 +1,121 @@
+.root {
+  --adm-bg: #1a1f2e;
+  --adm-surface: #232a3b;
+  --adm-border: rgba(255, 255, 255, 0.08);
+  --adm-text: #e8ecf4;
+  --adm-muted: #94a3b8;
+  --adm-accent: #3b82f6;
+  --adm-danger: #ef4444;
+  --adm-success: #10b981;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--adm-border);
+  background: var(--adm-surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.brandMark {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--adm-accent), #1d4ed8);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.backLink {
+  color: var(--adm-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--adm-text);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--adm-border);
+  padding: 16px 0;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.navItem {
+  display: block;
+  padding: 10px 20px;
+  color: var(--adm-muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+  border-left: 3px solid transparent;
+}
+
+.navItem:hover {
+  color: var(--adm-text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navItemActive {
+  color: var(--adm-text);
+  border-left-color: var(--adm-accent);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.main {
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--adm-border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 12px;
+  }
+
+  .navItem {
+    padding: 8px 12px;
+    border-left: none;
+    border-radius: 8px;
+  }
+
+  .navItemActive {
+    border-left: none;
+    background: rgba(59, 130, 246, 0.2);
+  }
+
+  .body {
+    flex-direction: column;
+  }
+}

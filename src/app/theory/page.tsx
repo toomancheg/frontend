@@ -1,21 +1,40 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
+import { AppShell } from "@/components/layout/AppShell";
 import { apiFetch } from "@/lib/api";
-import { getAccessToken } from "@/lib/auth";
-import { buttonStyle, uiStyles } from "@/app/uiStyles";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
-type Topic = { id: string; title: string; order_index: number; difficulty: "easy" | "medium" | "hard" };
-type TheoryBlock = { id: string; title: string; markdown: string; image_urls: string[]; tags: string[]; topic_id: string };
+import styles from "./theory.module.css";
 
-export default function TheoryPage() {
-  const token = useMemo(() => getAccessToken(), []);
+type Topic = {
+  id: string;
+  title: string;
+  order_index: number;
+  difficulty: "easy" | "medium" | "hard";
+  theory_accessible?: boolean;
+};
+
+const ICONS = ["⚙", "🔥", "⚡", "🌊", "🧲", "☢"] as const;
+
+function topicIcon(i: number) {
+  return ICONS[i % ICONS.length];
+}
+
+const DIFF_LABEL: Record<string, string> = {
+  easy: "лёгкая",
+  medium: "средняя",
+  hard: "сложная",
+};
+
+export default function TheoryListPage() {
+  const token = useRequireAuth();
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [selectedTopic, setSelectedTopic] = useState<string>("");
-  const [blocks, setBlocks] = useState<TheoryBlock[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [sort, setSort] = useState<"order" | "difficulty" | "progress">("order");
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     if (!token) return;
@@ -23,65 +42,77 @@ export default function TheoryPage() {
       try {
         const data = await apiFetch<Topic[]>("/api/content/topics", { token });
         setTopics(data);
-        if (data.length > 0) setSelectedTopic(data[0].id);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка загрузки тем");
       }
     })();
   }, [token]);
 
-  useEffect(() => {
-    if (!token || !selectedTopic) return;
-    (async () => {
-      try {
-        const data = await apiFetch<TheoryBlock[]>(`/api/content/topics/${selectedTopic}/theory-blocks`, { token });
-        setBlocks(data);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Ошибка загрузки теории");
-      }
-    })();
-  }, [token, selectedTopic]);
+  const sorted = useMemo(() => {
+    let list = [...topics];
+    if (sort === "difficulty") {
+      const rank = { easy: 0, medium: 1, hard: 2 };
+      list.sort((a, b) => rank[a.difficulty] - rank[b.difficulty]);
+    } else if (sort === "order") {
+      list.sort((a, b) => a.order_index - b.order_index);
+    }
+    if (q.trim()) {
+      const qq = q.toLowerCase();
+      list = list.filter((t) => t.title.toLowerCase().includes(qq));
+    }
+    return list;
+  }, [topics, sort, q]);
 
   return (
-    <main style={uiStyles.page}>
-      <h1>Теория и квизы</h1>
-      <p>Выберите тему и изучайте блоки теории.</p>
-      <div style={{ margin: "10px 0 18px" }}>
-        <Link href="/dashboard">В кабинет</Link>
+    <AppShell title="Теория">
+      {error ? <p style={{ color: "#ef4444" }}>{error}</p> : null}
+
+      <div className={styles.toolbar}>
+        <input
+          type="search"
+          className="pt-input"
+          placeholder="Поиск по названию…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          style={{ flex: 1, minWidth: 200, maxWidth: 360 }}
+        />
+        <select className={`pt-input ${styles.sort}`} value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+          <option value="order">По порядку</option>
+          <option value="difficulty">По сложности</option>
+          <option value="progress">По прогрессу</option>
+        </select>
       </div>
 
-      {!token ? <p>Сначала войдите в систему.</p> : null}
-      {error ? <p style={{ color: "crimson" }}>Не удалось загрузить теорию: {error}</p> : null}
-
-      <div style={{ display: "flex", gap: 16 }}>
-        <section style={{ minWidth: 260 }}>
-          <h3>Темы</h3>
-          <div style={{ display: "grid", gap: 8 }}>
-            {topics.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setSelectedTopic(t.id)}
-                style={buttonStyle({ active: selectedTopic === t.id })}
-              >
-                {t.title} ({t.difficulty})
-              </button>
-            ))}
-          </div>
-        </section>
-        <section style={{ flex: 1 }}>
-          <h3>Блоки</h3>
-          {blocks.length === 0 ? <p>Для выбранной темы пока нет материалов. Попробуйте другую тему.</p> : null}
-          <div style={{ display: "grid", gap: 14 }}>
-            {blocks.map((b) => (
-              <article key={b.id} style={uiStyles.card}>
-                <h4>{b.title}</h4>
-                <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{b.markdown}</pre>
-              </article>
-            ))}
-          </div>
-        </section>
+      <div className={`${styles.grid} pt-stagger`}>
+        {sorted.map((t, idx) => (
+          <article key={t.id} className={`pt-card pt-card-interactive ${styles.topicCard}`}>
+            <div className={styles.topicIcon}>{topicIcon(idx)}</div>
+            <h3 className="pt-heading" style={{ fontSize: "1.15rem" }}>
+              {t.title}
+            </h3>
+            <p className={styles.topicMeta}>Сложность: {DIFF_LABEL[t.difficulty] ?? t.difficulty}</p>
+            <p className={styles.status}>
+              {t.theory_accessible === false
+                ? "🔒 Теория по подписке (бесплатно — только в выбранном разделе)"
+                : "🟢 Доступно · Прочитано 0 квизов из 3"}
+            </p>
+            <div className="pt-progress">
+              <span style={{ width: "0%" }} />
+            </div>
+            <Link
+              href={`/theory/${t.id}`}
+              className={`pt-btn ${t.theory_accessible === false ? "pt-btn-secondary" : "pt-btn-primary"}`}
+              style={{ marginTop: "auto" }}
+            >
+              {t.theory_accessible === false ? "Подробнее" : "Изучать"}
+            </Link>
+          </article>
+        ))}
       </div>
-    </main>
+
+      {!sorted.length && !error ? (
+        <p className="pt-muted">Темы загружаются или список пуст.</p>
+      ) : null}
+    </AppShell>
   );
 }
-
