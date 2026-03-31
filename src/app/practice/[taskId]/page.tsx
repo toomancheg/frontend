@@ -319,12 +319,43 @@ export default function PracticeTaskPage() {
     setError(null);
     setActiveMode("self");
     try {
-      const check = await apiFetch<{ result_text: string }>("/api/practice/solution-check", {
+      const started = await apiFetch<{ check_id: string; status: string }>("/api/practice/solution-check", {
         method: "POST",
         token,
         body: { task_id: taskId, photo_url: uploadedPhotoUrl, answer_text: answer },
       });
-      setCheckResult({ score: 4, text: check.result_text ?? "" });
+      const checkId = started.check_id;
+      type Poll = {
+        check_id: string;
+        status: string;
+        result_text?: string;
+        task_progress_status?: string;
+      };
+      const maxPolls = 120;
+      for (let i = 0; i < maxPolls; i++) {
+        let data: Poll;
+        try {
+          data = await apiFetch<Poll>(`/api/practice/solution-check/${checkId}`, { token });
+        } catch (e) {
+          if (i === maxPolls - 1) {
+            throw e;
+          }
+          /* Прокси мог оборвать долгий GET, пока ИИ ещё считает — следующий опрос обычно быстрый. */
+          await new Promise((r) => setTimeout(r, 1500));
+          continue;
+        }
+        if (data.status === "completed") {
+          setCheckResult({ score: 4, text: data.result_text ?? "" });
+          return;
+        }
+        if (data.status === "failed") {
+          throw new Error(data.result_text?.trim() || "Ошибка проверки");
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      throw new Error(
+        "Превышено время ожидания проверки. Подождите и обновите страницу — ответ мог сохраниться на сервере."
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка проверки");
     } finally {
@@ -598,12 +629,9 @@ export default function PracticeTaskPage() {
               {checkResult ? (
                 <div className="pt-card" style={{ marginTop: 16, padding: 16 }}>
                   <div className={`${styles.score} ${scoreClass}`}>{checkResult.score} / 5</div>
-                  <p style={{ marginTop: 8 }}>{checkResult.text}</p>
-                  <ul className="pt-muted" style={{ fontSize: "0.9rem", marginTop: 10 }}>
-                    <li>Правильность формул: ✅</li>
-                    <li>Логика решения: ⚠️</li>
-                    <li>Итоговый ответ: ❌</li>
-                  </ul>
+                  <div style={{ marginTop: 8 }}>
+                    <MathContent text={checkResult.text} className={styles.markdownContent} />
+                  </div>
                 </div>
               ) : null}
             </>
