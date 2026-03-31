@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { SubjectLink } from "@/components/routing/SubjectLink";
 import { apiFetch } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
@@ -220,9 +220,9 @@ export default function ExamPage() {
           {subStatus && !subStatus.has_active_subscription && !subStatus.admin_full_access ? (
             <p className="pt-card" style={{ padding: 14, marginBottom: 16, borderLeft: "4px solid #f59e0b" }}>
               Запуск экзамена доступен при активной{" "}
-              <Link href="/subscription" style={{ textDecoration: "underline" }}>
+              <SubjectLink href="/subscription" style={{ textDecoration: "underline" }}>
                 подписке
-              </Link>
+              </SubjectLink>
               .
             </p>
           ) : null}
@@ -377,10 +377,10 @@ export default function ExamPage() {
             </p>
             <ul className="pt-muted">
               <li>
-                <Link href="/theory">Теория</Link>
+                <SubjectLink href="/theory">Теория</SubjectLink>
               </li>
               <li>
-                <Link href="/practice">Задачи</Link>
+                <SubjectLink href="/practice">Задачи</SubjectLink>
               </li>
             </ul>
             <button

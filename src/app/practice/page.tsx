@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { SubjectLink } from "@/components/routing/SubjectLink";
 import { apiFetch } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
@@ -287,12 +287,12 @@ export default function PracticeListPage() {
                   <span>🔴 не решено</span>
                 </div>
               </div>
-              <Link
+              <SubjectLink
                 href={t.list_only === true ? "/subscription" : `/practice/${t.id}`}
                 className={`pt-btn ${t.list_only === true ? "pt-btn-secondary" : "pt-btn-primary"}`}
               >
                 {t.list_only === true ? "Подписка" : "Решать"}
-              </Link>
+              </SubjectLink>
             </article>
           ))}
         </div>
@@ -304,13 +304,13 @@ export default function PracticeListPage() {
               <p className="pt-muted" style={{ fontSize: "0.85rem", margin: "8px 0" }}>
                 {t.list_only === true ? "Доступ по подписке…" : `${t.condition_text.slice(0, 80)}…`}
               </p>
-              <Link
+              <SubjectLink
                 href={t.list_only === true ? "/subscription" : `/practice/${t.id}`}
                 className={`pt-btn ${t.list_only === true ? "pt-btn-secondary" : "pt-btn-primary"}`}
                 style={{ width: "100%" }}
               >
                 {t.list_only === true ? "Подписка" : "Решать"}
-              </Link>
+              </SubjectLink>
             </article>
           ))}
         </div>

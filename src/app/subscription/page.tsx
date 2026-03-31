@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { SubjectLink } from "@/components/routing/SubjectLink";
 import { apiFetch } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
@@ -95,7 +95,7 @@ export default function SubscriptionPage() {
         <div className="pt-card" style={{ padding: 20, marginBottom: 20 }}>
           <p className="pt-muted" style={{ margin: 0, lineHeight: 1.6 }}>
             Без подписки доступны названия задач по всем разделам; условие и режимы решения — по{" "}
-            <Link href="/practice">лимиту в бесплатном разделе</Link> (настраивается администратором) и для уже
+            <SubjectLink href="/practice">лимиту в бесплатном разделе</SubjectLink> (настраивается администратором) и для уже
             начатых задач. Теория открыта только в этом разделе. Экзамены — по подписке.
           </p>
         </div>

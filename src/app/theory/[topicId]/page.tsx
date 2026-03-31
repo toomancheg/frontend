@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { TheoryMarkdown } from "@/components/content/TheoryMarkdown";
 import { AppShell } from "@/components/layout/AppShell";
+import { SubjectLink } from "@/components/routing/SubjectLink";
 import { apiFetch, resolveMediaUrl } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
@@ -118,18 +118,18 @@ export default function TheoryTopicPage() {
   return (
     <AppShell title="Изучение темы">
       <div style={{ marginBottom: 16 }}>
-        <Link href="/theory" className="pt-btn pt-btn-secondary" style={{ padding: "8px 14px" }}>
+        <SubjectLink href="/theory" className="pt-btn pt-btn-secondary" style={{ padding: "8px 14px" }}>
           ← К списку тем
-        </Link>
+        </SubjectLink>
       </div>
 
       {error ? (
         <div style={{ marginBottom: 12 }}>
           <p style={{ color: "#ef4444", margin: "0 0 8px" }}>{error}</p>
           {error.toLowerCase().includes("подписк") ? (
-            <Link href="/subscription" className="pt-btn pt-btn-primary">
+            <SubjectLink href="/subscription" className="pt-btn pt-btn-primary">
               Оформить подписку
-            </Link>
+            </SubjectLink>
           ) : null}
         </div>
       ) : null}

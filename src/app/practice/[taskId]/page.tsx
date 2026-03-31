@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +7,7 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { SubjectLink } from "@/components/routing/SubjectLink";
 import { apiFetch, apiFetchForm, apiGetOr404 } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
@@ -428,9 +428,9 @@ export default function PracticeTaskPage() {
   return (
     <AppShell title={task?.title ?? "Задача"}>
       <div style={{ marginBottom: 12 }}>
-        <Link href="/practice" className="pt-btn pt-btn-secondary" style={{ padding: "8px 14px" }}>
+        <SubjectLink href="/practice" className="pt-btn pt-btn-secondary" style={{ padding: "8px 14px" }}>
           ← К списку
-        </Link>
+        </SubjectLink>
       </div>
 
       {error ? <p style={{ color: "#ef4444", marginBottom: 12 }}>{error}</p> : null}
@@ -441,9 +441,9 @@ export default function PracticeTaskPage() {
             Условие и инструменты решения для этой задачи доступны по подписке, в бесплатном лимите настроенного
             раздела или если вы уже начинали эту задачу ранее.
           </p>
-          <Link href="/subscription" className="pt-btn pt-btn-primary">
+          <SubjectLink href="/subscription" className="pt-btn pt-btn-primary">
             Оформить подписку
-          </Link>
+          </SubjectLink>
         </div>
       ) : null}
 
@@ -642,9 +642,9 @@ export default function PracticeTaskPage() {
       ) : null}
 
       <div className={styles.bottomBar}>
-        <Link href="/practice" className="pt-btn pt-btn-secondary">
+        <SubjectLink href="/practice" className="pt-btn pt-btn-secondary">
           Назад
-        </Link>
+        </SubjectLink>
         {!locked ? (
           <>
             <button type="button" className="pt-btn pt-btn-secondary">

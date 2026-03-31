@@ -38,9 +38,9 @@ export default function Home() {
         </div>
         <div className={`pt-container ${styles.heroInner}`}>
           <div className={styles.heroText}>
-            <h1>Тренируй физику с электронным наставником</h1>
+            <h1>Тренируй предметы с электронным наставником</h1>
             <p>
-              Интерактивные задачи, мгновенная проверка решений и персонализированный план обучения
+              Математика, информатика, химия и физика: интерактивные задачи, мгновенная проверка решений и персонализированный план обучения
             </p>
             <div className={styles.heroActions}>
               <Link href="/auth/register" className="pt-btn pt-btn-primary">
@@ -55,6 +55,32 @@ export default function Home() {
             <div className={styles.illusOrbit} />
             <div className={styles.illusFormula}>F = ma</div>
             <div className={`${styles.illusFormula} ${styles.illusFormula2}`}>E = mc²</div>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className="pt-container">
+          <h2 className={styles.sectionTitle}>Выберите предмет</h2>
+          <p className={styles.sectionSub}>Предмет влияет на темы, задачи, экзамены и рекомендации</p>
+          <div className={`${styles.grid3} pt-stagger`}>
+            {[
+              { slug: "physics", title: "Физика", icon: "φ", desc: "Классика: механика, МКТ, электричество и т.д." },
+              { slug: "math", title: "Математика", icon: "∑", desc: "Алгебра, геометрия, функции, логика." },
+              { slug: "cs", title: "Информатика", icon: "⌘", desc: "Алгоритмы, структуры данных, код и логика." },
+              { slug: "chemistry", title: "Химия", icon: "⚗", desc: "Реакции, расчёты, хим. связь и т.д." },
+            ].map((s) => (
+              <article key={s.slug} className={`pt-card pt-card-interactive ${styles.modeCard}`}>
+                <div className={styles.modeIcon}>{s.icon}</div>
+                <h3>{s.title}</h3>
+                <p>{s.desc}</p>
+                <div style={{ marginTop: 12 }}>
+                  <Link href={`/${s.slug}/dashboard`} className="pt-btn pt-btn-secondary">
+                    Открыть
+                  </Link>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>

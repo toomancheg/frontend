@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { getSubjectPrefixFromPathname } from "@/lib/subject";
 
 import styles from "./AppShell.module.css";
 
@@ -28,15 +29,20 @@ type Props = {
 };
 
 export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, onLogout }: Props) {
+  const router = useRouter();
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const subjectPrefix = getSubjectPrefixFromPathname(pathname);
+  const hrefInSubject = (href: string) => (subjectPrefix ? `${subjectPrefix}${href}` : href);
+  const currentSubject = subjectPrefix ? subjectPrefix.slice(1) : "";
 
   return (
     <div className={styles.root}>
       <header className={styles.topbar}>
         <div className={`pt-container ${styles.topInner}`}>
-          <Link href="/dashboard" className={styles.logo}>
+          <Link href={hrefInSubject("/dashboard")} className={styles.logo}>
             <span className={styles.logoMark}>φ</span>
             <span>Phystrainer</span>
           </Link>
@@ -54,6 +60,27 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
           </div>
 
           <div className={styles.actions}>
+            <select
+              className="pt-input pt-hide-mobile"
+              value={currentSubject || "physics"}
+              onChange={(e) => {
+                const next = e.target.value;
+                const p = pathname || "/dashboard";
+                const normalized = p.startsWith("/") ? p : `/${p}`;
+                const replaced = normalized.replace(
+                  /^\/([a-z][a-z0-9_-]*)\/(dashboard|theory|practice|exam|progress|subscription|settings|admin)(\/|$)/i,
+                  `/${next}/$2$3`
+                );
+                router.push(replaced);
+              }}
+              aria-label="Предмет"
+              style={{ maxWidth: 190 }}
+            >
+              <option value="physics">Физика</option>
+              <option value="math">Математика</option>
+              <option value="cs">Информатика</option>
+              <option value="chemistry">Химия</option>
+            </select>
             <button
               type="button"
               className={`${styles.iconBtn} pt-hide-desktop`}
@@ -83,11 +110,11 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
               {menuOpen ? (
                 <div className={styles.dropdown} role="menu">
                   <div className={styles.dropdownEmail}>{userEmail ?? "Гость"}</div>
-                  <Link href="/settings" role="menuitem" onClick={() => setMenuOpen(false)}>
+                  <Link href={hrefInSubject("/settings")} role="menuitem" onClick={() => setMenuOpen(false)}>
                     Профиль и настройки
                   </Link>
                   {userRole === "admin" ? (
-                    <Link href="/admin" role="menuitem" onClick={() => setMenuOpen(false)}>
+                    <Link href={hrefInSubject("/admin")} role="menuitem" onClick={() => setMenuOpen(false)}>
                       Админ-панель
                     </Link>
                   ) : null}
@@ -122,11 +149,12 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
         <aside className={styles.sidebar}>
           <nav className={styles.sideNav} aria-label="Основная навигация">
             {NAV.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const fullHref = hrefInSubject(item.href);
+              const active = pathname === fullHref || pathname.startsWith(`${fullHref}/`);
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={fullHref}
                   className={active ? styles.navActive : undefined}
                 >
                   <span className={styles.navIcon} aria-hidden>
@@ -151,11 +179,12 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
 
       <nav className={styles.bottomNav} aria-label="Мобильная навигация">
         {NAV.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const fullHref = hrefInSubject(item.href);
+          const active = pathname === fullHref || pathname.startsWith(`${fullHref}/`);
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={fullHref}
               className={active ? styles.bottomActive : undefined}
             >
               <span aria-hidden>{item.icon}</span>

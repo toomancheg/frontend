@@ -1,5 +1,6 @@
 /** База URL API: пустая строка = относительные пути (прокси Next.js → backend в dev). */
 import { getAccessToken, getRefreshToken, setTokens } from "@/lib/auth";
+import { getSubjectPrefixFromPathname } from "@/lib/subject";
 
 export function getApiBaseUrl(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL;
@@ -43,6 +44,37 @@ function buildAuthHeaders(token?: string | null): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
+function getSubjectPrefixFromLocation(): string {
+  if (typeof window === "undefined") return "";
+  return getSubjectPrefixFromPathname(window.location.pathname || "");
+}
+
+function subjectAwarePath(path: string): string {
+  const prefix = getSubjectPrefixFromLocation();
+  if (!prefix) return path;
+  if (!path.startsWith("/api/")) return path;
+
+  // Auth and public endpoints are global (no subject prefix).
+  if (path.startsWith("/api/auth/") || path === "/api/health") return path;
+
+  // Only rewrite endpoints that are subject-aware on backend.
+  const subjectAwareRoots: readonly string[] = [
+    "/api/content/",
+    "/api/practice/",
+    "/api/exam/",
+    "/api/dashboard/",
+    "/api/admin/",
+    "/api/ai/",
+    "/api/users/me/progress-export",
+  ] as const;
+
+  if (subjectAwareRoots.some((root) => path.startsWith(root))) {
+    return `${prefix}${path}`;
+  }
+
+  return path;
+}
+
 async function tryRefreshFromCookie(): Promise<string | null> {
   const stored = getRefreshToken();
   try {
@@ -74,7 +106,7 @@ export async function apiFetch<T>(
   } = {}
 ): Promise<T> {
   const base = getApiBaseUrl();
-  const url = `${base}${path}`;
+  const url = `${base}${subjectAwarePath(path)}`;
 
   let res: Response;
   try {
@@ -140,7 +172,7 @@ export async function apiFetch<T>(
  */
 export async function apiGetOr404<T>(path: string, opts: { token?: string | null } = {}): Promise<T | null> {
   const base = getApiBaseUrl();
-  const url = `${base}${path}`;
+  const url = `${base}${subjectAwarePath(path)}`;
 
   async function doFetch(access: string | null): Promise<Response> {
     return fetch(url, {
@@ -200,7 +232,7 @@ export async function apiFetchBlob(
   opts: { token?: string | null } = {}
 ): Promise<Blob> {
   const base = getApiBaseUrl();
-  const url = `${base}${path}`;
+  const url = `${base}${subjectAwarePath(path)}`;
 
   let res: Response;
   try {
@@ -233,7 +265,7 @@ export async function apiFetchForm<T>(
   opts: { token?: string | null; body: FormData }
 ): Promise<T> {
   const base = getApiBaseUrl();
-  const url = `${base}${path}`;
+  const url = `${base}${subjectAwarePath(path)}`;
 
   let res: Response;
   try {

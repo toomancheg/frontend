@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { SubjectLink } from "@/components/routing/SubjectLink";
 import { apiFetch, resolveMediaUrl } from "@/lib/api";
 import { clearTokens } from "@/lib/auth";
 import { getDisplayName, setDisplayName } from "@/lib/displayName";
@@ -150,9 +150,9 @@ export default function DashboardPage() {
                   <div className="pt-progress" style={{ marginBottom: 12 }}>
                     <span style={{ width: `${x.p}%` }} />
                   </div>
-                  <Link href="/theory" className="pt-btn pt-btn-secondary" style={{ width: "100%" }}>
+                  <SubjectLink href="/theory" className="pt-btn pt-btn-secondary" style={{ width: "100%" }}>
                     Продолжить
-                  </Link>
+                  </SubjectLink>
                 </article>
               ))}
             </div>
@@ -167,9 +167,9 @@ export default function DashboardPage() {
                 ? `На основе твоих ошибок рекомендуем повторить тему «${stats.weak_topics[0]}»`
                 : "Отличная работа! Попробуй мини-экзамен по силе трения."}
             </p>
-            <Link href="/theory" className="pt-btn pt-btn-primary">
+            <SubjectLink href="/theory" className="pt-btn pt-btn-primary">
               Начать
-            </Link>
+            </SubjectLink>
           </section>
 
           <section>
@@ -177,15 +177,15 @@ export default function DashboardPage() {
               Быстрый старт
             </h3>
             <div className={styles.quick}>
-              <Link href="/practice" className={styles.quickBtn}>
+              <SubjectLink href="/practice" className={styles.quickBtn}>
                 🎲 Случайная задача
-              </Link>
-              <Link href="/exam" className={styles.quickBtn}>
+              </SubjectLink>
+              <SubjectLink href="/exam" className={styles.quickBtn}>
                 ⚡ Мини-экзамен
-              </Link>
-              <Link href="/theory" className={styles.quickBtn}>
+              </SubjectLink>
+              <SubjectLink href="/theory" className={styles.quickBtn}>
                 🎯 Сложные темы
-              </Link>
+              </SubjectLink>
             </div>
           </section>
 
