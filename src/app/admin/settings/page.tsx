@@ -5,6 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
+import uiStyles from "../users/users.module.css";
+import styles from "./settings.module.css";
+
 type Topic = {
   id: string;
   title: string;
@@ -34,7 +37,11 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      setError("Требуется авторизация. Если вы уже вошли, обновите страницу.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -92,32 +99,29 @@ export default function AdminSettingsPage() {
 
   return (
     <section style={{ maxWidth: 640 }}>
-      <h1 style={{ fontSize: "1.5rem", margin: "0 0 12px", color: "#e8ecf4" }}>Настройки сервиса</h1>
-      <p style={{ color: "#94a3b8", lineHeight: 1.6, marginBottom: 20 }}>
+      <h1 className={styles.title}>Настройки сервиса</h1>
+      <p className={styles.lead}>
         Бесплатный лимит: раздел (тема), в котором без подписки доступны теория и решение первых N задач (по
         алфавиту названий). Остальные разделы — только список задач без условия и без решений.
       </p>
-      <p style={{ color: "#94a3b8", lineHeight: 1.6, marginBottom: 20 }}>
+      <p className={styles.lead}>
         Цены подписки (руб., для Robokassa OutSum). Нулевая или пустая цена скрывает тариф на странице «Подписка» у
         пользователей.
       </p>
 
-      {loading ? <p style={{ color: "#94a3b8" }}>Загрузка…</p> : null}
-      {error ? <p style={{ color: "#f87171", marginBottom: 12 }}>{error}</p> : null}
-      {ok ? <p style={{ color: "#4ade80", marginBottom: 12 }}>{ok}</p> : null}
+      {loading ? <p style={{ color: "var(--adm-muted)" }}>Загрузка…</p> : null}
+      {error ? <p className={uiStyles.err}>{error}</p> : null}
+      {ok ? <p style={{ color: "var(--adm-success)", marginBottom: 12 }}>{ok}</p> : null}
 
       {!loading ? (
-        <div className="pt-card" style={{ padding: 20, display: "grid", gap: 16 }}>
-          <h2 className="pt-heading" style={{ fontSize: "1rem", margin: 0, color: "#e8ecf4" }}>
-            Бесплатный доступ
-          </h2>
-          <label style={{ display: "grid", gap: 8 }}>
-            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Бесплатный раздел (тема)</span>
+        <div className={styles.card}>
+          <h2 className={styles.h2}>Бесплатный доступ</h2>
+          <label className={styles.label}>
+            <span className={styles.labelText}>Бесплатный раздел (тема)</span>
             <select
-              className="pt-input"
+              className={uiStyles.select}
               value={freeTopicId}
               onChange={(e) => setFreeTopicId(e.target.value)}
-              style={{ background: "#0f172a", color: "#e8ecf4" }}
             >
               <option value="">— не задан (теория только по подписке) —</option>
               {topics.map((t) => (
@@ -127,79 +131,70 @@ export default function AdminSettingsPage() {
               ))}
             </select>
           </label>
-          <label style={{ display: "grid", gap: 8 }}>
-            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Число задач с полным доступом в этом разделе</span>
+          <label className={styles.label}>
+            <span className={styles.labelText}>Число задач с полным доступом в этом разделе</span>
             <input
               type="number"
               min={0}
-              className="pt-input"
+              className={uiStyles.input}
               value={freeLimit}
               onChange={(e) => setFreeLimit(e.target.value)}
-              style={{ background: "#0f172a", color: "#e8ecf4" }}
             />
           </label>
 
-          <h2 className="pt-heading" style={{ fontSize: "1rem", margin: "8px 0 0", color: "#e8ecf4" }}>
+          <h2 className={styles.h2} style={{ marginTop: 8 }}>
             Цены подписки (₽)
           </h2>
-          <label style={{ display: "grid", gap: 8 }}>
-            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>1 месяц</span>
+          <label className={styles.label}>
+            <span className={styles.labelText}>1 месяц</span>
             <input
               type="text"
               inputMode="decimal"
-              className="pt-input"
+              className={uiStyles.input}
               value={priceMonth}
               onChange={(e) => setPriceMonth(e.target.value)}
               placeholder="0.00"
-              style={{ background: "#0f172a", color: "#e8ecf4" }}
             />
           </label>
-          <label style={{ display: "grid", gap: 8 }}>
-            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>3 месяца</span>
+          <label className={styles.label}>
+            <span className={styles.labelText}>3 месяца</span>
             <input
               type="text"
               inputMode="decimal"
-              className="pt-input"
+              className={uiStyles.input}
               value={priceThree}
               onChange={(e) => setPriceThree(e.target.value)}
               placeholder="0.00"
-              style={{ background: "#0f172a", color: "#e8ecf4" }}
             />
           </label>
-          <label style={{ display: "grid", gap: 8 }}>
-            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Учебный год</span>
+          <label className={styles.label}>
+            <span className={styles.labelText}>Учебный год</span>
             <input
               type="text"
               inputMode="decimal"
-              className="pt-input"
+              className={uiStyles.input}
               value={priceAcademic}
               onChange={(e) => setPriceAcademic(e.target.value)}
               placeholder="0.00"
-              style={{ background: "#0f172a", color: "#e8ecf4" }}
             />
           </label>
-          <label style={{ display: "grid", gap: 8 }}>
-            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Календарный год</span>
+          <label className={styles.label}>
+            <span className={styles.labelText}>Календарный год</span>
             <input
               type="text"
               inputMode="decimal"
-              className="pt-input"
+              className={uiStyles.input}
               value={priceCalendar}
               onChange={(e) => setPriceCalendar(e.target.value)}
               placeholder="0.00"
-              style={{ background: "#0f172a", color: "#e8ecf4" }}
             />
           </label>
 
-          <button
-            type="button"
-            className="pt-btn pt-btn-primary"
-            style={{ justifySelf: "start" }}
-            disabled={saving}
-            onClick={() => void save()}
-          >
-            {saving ? "Сохранение…" : "Сохранить"}
-          </button>
+          <div className={styles.actions}>
+            <button type="button" className={uiStyles.btn} disabled={saving} onClick={() => void save()}>
+              {saving ? "Сохранение…" : "Сохранить"}
+            </button>
+          </div>
         </div>
       ) : null}
     </section>

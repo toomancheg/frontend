@@ -14,21 +14,21 @@
 
 .field label {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--adm-muted);
 }
 
 .input,
 .select {
-  background: #232a3b;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--adm-surface);
+  border: 1px solid color-mix(in srgb, var(--adm-border) 80%, transparent);
   border-radius: 8px;
-  color: #e8ecf4;
+  color: var(--adm-text);
   padding: 8px 10px;
   min-width: 140px;
 }
 
 .btn {
-  background: #3b82f6;
+  background: var(--adm-accent);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -43,13 +43,13 @@
 
 .btnGhost {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #e8ecf4;
+  border: 1px solid color-mix(in srgb, var(--adm-border) 100%, transparent);
+  color: var(--adm-text);
 }
 
 .tableWrap {
   overflow: auto;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--adm-border);
   border-radius: 12px;
 }
 
@@ -63,11 +63,11 @@
 .table td {
   padding: 10px 12px;
   text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--adm-border) 85%, transparent);
 }
 
 .table th {
-  color: #94a3b8;
+  color: var(--adm-muted);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -81,7 +81,7 @@
 }
 
 .link {
-  color: #60a5fa;
+  color: color-mix(in srgb, var(--adm-accent) 70%, #ffffff);
   text-decoration: none;
 }
 
@@ -94,7 +94,7 @@
   gap: 12px;
   align-items: center;
   margin-top: 16px;
-  color: #94a3b8;
+  color: var(--adm-muted);
   font-size: 0.9rem;
 }
 
@@ -102,7 +102,7 @@
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0 0 16px;
-  color: #e8ecf4;
+  color: var(--adm-text);
 }
 
 .err {

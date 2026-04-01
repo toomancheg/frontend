@@ -181,7 +181,7 @@ export default function Home() {
       </div>
 
       <footer className={`pt-container ${styles.footer}`}>
-        © {new Date().getFullYear()} яТренер · Физика с ИИ-наставником
+        © {new Date().getFullYear()} яТренер · Предметы с электронным-наставником
       </footer>
     </>
   );

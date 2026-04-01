@@ -25,7 +25,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "яТренер — физика с ИИ-наставником",
+  title: "яТренер — Предметы с электронным-наставником",
   description: "Интерактивные задачи, мгновенная проверка и персональный план обучения",
 };
 

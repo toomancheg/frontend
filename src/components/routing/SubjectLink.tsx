@@ -22,6 +22,8 @@ function prefixHref(href: Props["href"], prefix: string): Props["href"] {
     if (!href.startsWith("/")) return href;
     if (href.startsWith(prefix + "/") || href === prefix) return href;
     if (href.startsWith("/auth/")) return href;
+    // Профиль и настройки пользователя — глобальные, без префикса предмета.
+    if (href === "/settings" || href.startsWith("/settings/")) return href;
     return `${prefix}${href}`;
   }
 
@@ -30,6 +32,7 @@ function prefixHref(href: Props["href"], prefix: string): Props["href"] {
   if (!pathname.startsWith("/")) return href;
   if (pathname.startsWith(prefix + "/") || pathname === prefix) return href;
   if (pathname.startsWith("/auth/")) return href;
+  if (pathname === "/settings" || pathname.startsWith("/settings/")) return href;
 
   return { ...href, pathname: `${prefix}${pathname}` };
 }

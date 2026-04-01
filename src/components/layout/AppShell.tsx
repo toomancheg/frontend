@@ -43,6 +43,8 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
 
   const subjectPrefix = getSubjectPrefixFromPathname(pathname);
   const hrefInSubject = (href: string) => (subjectPrefix ? `${subjectPrefix}${href}` : href);
+  /** Настройки профиля общие для всех предметов — всегда /settings */
+  const hrefForNav = (href: string) => (href === "/settings" ? "/settings" : hrefInSubject(href));
   const currentSubject = subjectPrefix ? subjectPrefix.slice(1) : "";
   const subjectMeta = SUBJECT_META[currentSubject || "physics"] ?? SUBJECT_META.physics;
 
@@ -76,9 +78,13 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
                 const p = pathname || "/dashboard";
                 const normalized = p.startsWith("/") ? p : `/${p}`;
                 const replaced = normalized.replace(
-                  /^\/([a-z][a-z0-9_-]*)\/(dashboard|theory|practice|exam|progress|subscription|settings|admin)(\/|$)/i,
+                  /^\/([a-z][a-z0-9_-]*)\/(dashboard|theory|practice|exam|progress|subscription|admin)(\/|$)/i,
                   `/${next}/$2$3`
                 );
+                if (normalized === "/settings" || normalized.startsWith("/settings/")) {
+                  router.push(`/${next}/dashboard`);
+                  return;
+                }
                 router.push(replaced === normalized ? `/${next}/dashboard` : replaced);
               }}
               aria-label="Предмет"
@@ -118,7 +124,7 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
               {menuOpen ? (
                 <div className={styles.dropdown} role="menu">
                   <div className={styles.dropdownEmail}>{userEmail ?? "Гость"}</div>
-                  <Link href={hrefInSubject("/settings")} role="menuitem" onClick={() => setMenuOpen(false)}>
+                  <Link href="/settings" role="menuitem" onClick={() => setMenuOpen(false)}>
                     Профиль и настройки
                   </Link>
                   {userRole === "admin" ? (
@@ -157,8 +163,11 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
         <aside className={styles.sidebar}>
           <nav className={styles.sideNav} aria-label="Основная навигация">
             {NAV.map((item) => {
-              const fullHref = hrefInSubject(item.href);
-              const active = pathname === fullHref || pathname.startsWith(`${fullHref}/`);
+              const fullHref = hrefForNav(item.href);
+              const active =
+                item.href === "/settings"
+                  ? pathname === "/settings" || pathname.startsWith("/settings/")
+                  : pathname === fullHref || pathname.startsWith(`${fullHref}/`);
               return (
                 <Link
                   key={item.href}
@@ -187,8 +196,11 @@ export function AppShell({ children, title, userEmail, userRole, userAvatarUrl, 
 
       <nav className={styles.bottomNav} aria-label="Мобильная навигация">
         {NAV.map((item) => {
-          const fullHref = hrefInSubject(item.href);
-          const active = pathname === fullHref || pathname.startsWith(`${fullHref}/`);
+          const fullHref = hrefForNav(item.href);
+          const active =
+            item.href === "/settings"
+              ? pathname === "/settings" || pathname.startsWith("/settings/")
+              : pathname === fullHref || pathname.startsWith(`${fullHref}/`);
           return (
             <Link
               key={item.href}

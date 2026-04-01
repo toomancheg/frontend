@@ -167,7 +167,7 @@ export default function AdminContentPage() {
   }
 
   return (
-    <section style={{ maxWidth: 960 }}>
+    <section className={styles.page}>
       <h1 className={styles.title}>Контент</h1>
       <p className={styles.lead}>
         Создание тем и задач через API <code className={styles.mono}>/api/content/topics</code> и{" "}

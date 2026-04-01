@@ -35,6 +35,14 @@ type DashboardStats = {
   weak_topics: string[];
 };
 
+type TopicOut = {
+  id: string;
+  title: string;
+  order_index: number;
+  difficulty: "easy" | "medium" | "hard";
+  theory_accessible?: boolean;
+};
+
 const PROGRAM_LABEL: Record<string, string> = {
   basic: "Базовая",
   profile: "Профильная",
@@ -47,6 +55,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [topics, setTopics] = useState<TopicOut[] | null>(null);
   const [greetingName, setGreetingName] = useState("");
 
   const accessToken = useRequireAuth();
@@ -66,6 +75,8 @@ export default function DashboardPage() {
         if (fromDb) setDisplayName(fromDb);
         const dashboard = await apiFetch<DashboardStats>("/api/dashboard/stats", { token: accessToken });
         setStats(dashboard);
+        const ts = await apiFetch<TopicOut[]>("/api/content/topics", { token: accessToken });
+        setTopics(ts);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Ошибка загрузки профиля");
       } finally {
@@ -139,22 +150,31 @@ export default function DashboardPage() {
               Продолжить обучение
             </h3>
             <div className={styles.hScroll}>
-              {[
-                { t: "Кинематика", p: 45, icon: "🎯" },
-                { t: "Динамика", p: 20, icon: "⚙" },
-                { t: "Энергия", p: 60, icon: "⚡" },
-              ].map((x) => (
-                <article key={x.t} className={`pt-card pt-card-interactive ${styles.hCard}`}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>{x.icon}</div>
-                  <h4>{x.t}</h4>
-                  <div className="pt-progress" style={{ marginBottom: 12 }}>
-                    <span style={{ width: `${x.p}%` }} />
-                  </div>
-                  <SubjectLink href="/theory" className="pt-btn pt-btn-secondary" style={{ width: "100%" }}>
-                    Продолжить
-                  </SubjectLink>
-                </article>
-              ))}
+              {topics?.length ? (
+                topics.slice(0, 12).map((t) => {
+                  const canTheory = t.theory_accessible !== false;
+                  return (
+                    <article key={t.id} className={`pt-card pt-card-interactive ${styles.hCard}`}>
+                      <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>{canTheory ? "📘" : "🔒"}</div>
+                      <h4>{t.title}</h4>
+                      <div className="pt-progress" style={{ marginBottom: 12 }}>
+                        <span style={{ width: `0%` }} />
+                      </div>
+                      <SubjectLink
+                        href={canTheory ? `/theory/${t.id}` : "/subscription"}
+                        className={`pt-btn ${canTheory ? "pt-btn-secondary" : "pt-btn-primary"}`}
+                        style={{ width: "100%" }}
+                      >
+                        {canTheory ? "Открыть" : "Открыть доступ"}
+                      </SubjectLink>
+                    </article>
+                  );
+                })
+              ) : (
+                <div className="pt-muted" style={{ padding: 8 }}>
+                  Темы пока не добавлены.
+                </div>
+              )}
             </div>
           </section>
 

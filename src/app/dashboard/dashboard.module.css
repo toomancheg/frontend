@@ -65,17 +65,12 @@
 }
 
 .hScroll {
-  display: flex;
+  display: grid;
   gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .hCard {
-  flex: 0 0 min(280px, 85vw);
-  scroll-snap-align: start;
   padding: 16px;
 }
 

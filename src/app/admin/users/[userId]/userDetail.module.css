@@ -1,24 +1,24 @@
 .back {
   display: inline-block;
-  color: #94a3b8;
+  color: var(--adm-muted);
   font-size: 0.9rem;
   margin-bottom: 16px;
   text-decoration: none;
 }
 
 .back:hover {
-  color: #e8ecf4;
+  color: var(--adm-text);
 }
 
 .meta {
-  color: #94a3b8;
+  color: var(--adm-muted);
   margin: 0 0 20px;
   font-size: 0.95rem;
 }
 
 .card {
-  background: #232a3b;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
@@ -27,7 +27,7 @@
 .h2 {
   font-size: 1.1rem;
   margin: 0 0 16px;
-  color: #e8ecf4;
+  color: var(--adm-text);
 }
 
 .grid {

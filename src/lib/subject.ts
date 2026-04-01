@@ -5,9 +5,15 @@ export const SUBJECT_SECTIONS = [
   "exam",
   "progress",
   "subscription",
-  "settings",
   "admin",
 ] as const;
+
+export const KNOWN_SUBJECTS = ["physics", "math", "cs", "chemistry"] as const;
+export type KnownSubject = (typeof KNOWN_SUBJECTS)[number];
+
+export function isKnownSubjectSlug(slug: string): slug is KnownSubject {
+  return (KNOWN_SUBJECTS as readonly string[]).includes(slug.toLowerCase());
+}
 
 export function getSubjectPrefixFromPathname(pathname: string | null | undefined): string {
   const path = pathname ?? "";

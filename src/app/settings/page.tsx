@@ -15,6 +15,16 @@ import styles from "./settings.module.css";
 const FONT_SIZE_KEY = "phystr-font-size";
 const FONT_SIZES = ["0.9rem", "1rem", "1.1rem"] as const;
 
+function uiLog(event: string, data?: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  // Включение: localStorage.setItem("phystr:ui:log", "1") или добавьте к URL `?ptlog=1`
+  const enabled =
+    window.location.search.includes("ptlog=1") || localStorage.getItem("phystr:ui:log") === "1";
+  if (!enabled) return;
+  // eslint-disable-next-line no-console
+  console.info(`[ui][settings] ${event}`, data ?? {});
+}
+
 const PROGRAMS = [
   { value: "basic", label: "Базовая" },
   { value: "profile", label: "Профильная" },
@@ -57,6 +67,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const accessToken = useRequireAuth();
+  const didLogBlocksRef = useRef(false);
 
   const [user, setUser] = useState<MeUser | null>(null);
   const [displayName, setDisplayNameState] = useState("");
@@ -82,6 +93,15 @@ export default function SettingsPage() {
   const [prefsMessage, setPrefsMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    uiLog("page.mount");
+    return () => uiLog("page.unmount");
+  }, []);
+
+  useEffect(() => {
+    uiLog("auth.token.state", { hasToken: Boolean(accessToken) });
+  }, [accessToken]);
+
+  useEffect(() => {
     const raw = localStorage.getItem(FONT_SIZE_KEY);
     if (raw && (FONT_SIZES as readonly string[]).includes(raw)) {
       const s = raw as (typeof FONT_SIZES)[number];
@@ -96,11 +116,24 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (!accessToken) return;
-
+    if (!accessToken) {
+      uiLog("me.skip.no_token");
+      return;
+    }
     (async () => {
       try {
+        uiLog("me.fetch.start", { path: "/api/auth/me" });
         const me = await apiFetch<MeUser>("/api/auth/me", { token: accessToken });
+        uiLog("me.fetch.success", {
+          id: me.id,
+          email: me.email,
+          role: me.role,
+          grade: me.grade,
+          program: me.program,
+          hasAvatar: Boolean(me.avatar_url),
+          hasDisplayName: Boolean(me.display_name && me.display_name.trim()),
+          notificationKeys: Object.keys(me.notification_prefs ?? {}),
+        });
         setUser(me);
         setDisplayNameState(me.display_name ?? "");
         setGrade(me.grade);
@@ -109,13 +142,30 @@ export default function SettingsPage() {
         const dn = me.display_name?.trim();
         if (dn) setDisplayName(dn);
       } catch (err) {
+        uiLog("me.fetch.error", { message: err instanceof Error ? err.message : String(err) });
         setError(err instanceof Error ? err.message : "Не удалось загрузить настройки");
       } finally {
+        uiLog("me.fetch.finally", { isLoadingBefore: isLoading });
         setIsLoading(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      uiLog("render.done.no_user", { error: error ?? null });
+      return;
+    }
+    if (didLogBlocksRef.current) return;
+    didLogBlocksRef.current = true;
+
+    uiLog("render.block.success", { block: "profile" });
+    uiLog("render.block.success", { block: "notifications" });
+    uiLog("render.block.success", { block: "appearance" });
+    uiLog("render.block.success", { block: "privacy" });
+  }, [isLoading, user, error]);
 
   async function onLogout() {
     try {

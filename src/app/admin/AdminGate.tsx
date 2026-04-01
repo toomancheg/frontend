@@ -1,10 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import { apiFetch } from "@/lib/api";
+import { getSubjectPrefixFromPathname } from "@/lib/subject";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
 type Me = {
@@ -14,8 +16,10 @@ type Me = {
 
 export function AdminGate({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const token = useRequireAuth();
 
   useEffect(() => {
@@ -23,23 +27,34 @@ export function AdminGate({ children }: { children: ReactNode }) {
 
     (async () => {
       try {
+        setError(null);
         const me = await apiFetch<Me>("/api/auth/me", { token });
         if (me.role !== "admin") {
-          router.replace("/dashboard");
+          const prefix = getSubjectPrefixFromPathname(pathname);
+          const subject = prefix ? prefix.slice(1) : "physics";
+          router.replace(`/${subject}/dashboard`);
           return;
         }
         setEmail(me.email);
         setReady(true);
       } catch {
-        router.replace("/auth/login");
+        setError("Не удалось проверить права администратора. Похоже, сессия истекла — войдите заново.");
       }
     })();
-  }, [router, token]);
+  }, [router, token, pathname]);
 
   if (!ready) {
     return (
       <div style={{ minHeight: "100vh", background: "#1a1f2e", color: "#e8ecf4", padding: 24 }}>
         <p>Проверка доступа…</p>
+        {error ? (
+          <p style={{ marginTop: 12, color: "#fca5a5" }}>
+            {error}{" "}
+            <a href="/auth/login" style={{ color: "#e8ecf4", textDecoration: "underline" }}>
+              Перейти к входу
+            </a>
+          </p>
+        ) : null}
       </div>
     );
   }

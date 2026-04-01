@@ -1,6 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import SettingsPage from "@/app/settings/page";
-
-export default SettingsPage;
-
+/** Старые URL вида /chemistry/settings → единый /settings */
+export default function LegacySubjectSettingsRedirect() {
+  redirect("/settings");
+}
