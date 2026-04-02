@@ -22,6 +22,15 @@ type SiteSettings = {
   price_calendar_year: string;
 };
 
+type SubjectPriceRow = {
+  subject_id: string;
+  title: string;
+  price_month: string;
+  price_three_months: string;
+  price_academic_year: string;
+  price_calendar_year: string;
+};
+
 export default function AdminSettingsPage() {
   const token = useRequireAuth();
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -31,6 +40,14 @@ export default function AdminSettingsPage() {
   const [priceThree, setPriceThree] = useState("0");
   const [priceAcademic, setPriceAcademic] = useState("0");
   const [priceCalendar, setPriceCalendar] = useState("0");
+
+  const [subjectPriceRows, setSubjectPriceRows] = useState<SubjectPriceRow[]>([]);
+  const [subjectId, setSubjectId] = useState<string>("");
+  const [subPriceMonth, setSubPriceMonth] = useState("0");
+  const [subPriceThree, setSubPriceThree] = useState("0");
+  const [subPriceAcademic, setSubPriceAcademic] = useState("0");
+  const [subPriceCalendar, setSubPriceCalendar] = useState("0");
+
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +66,7 @@ export default function AdminSettingsPage() {
         apiFetch<Topic[]>("/api/content/topics", { token }),
         apiFetch<SiteSettings>("/api/admin/site-settings", { token }),
       ]);
+      const pr = await apiFetch<{ items: SubjectPriceRow[] }>("/api/admin/subscription-prices", { token });
       setTopics(t);
       setFreeTopicId(s.free_tier_topic_id ?? "");
       setFreeLimit(String(s.free_task_limit));
@@ -56,6 +74,17 @@ export default function AdminSettingsPage() {
       setPriceThree(s.price_three_months ?? "0.00");
       setPriceAcademic(s.price_academic_year ?? "0.00");
       setPriceCalendar(s.price_calendar_year ?? "0.00");
+
+      setSubjectPriceRows(pr.items ?? []);
+      const first = (pr.items ?? [])[0]?.subject_id ?? "";
+      setSubjectId(first);
+      const firstRow = (pr.items ?? [])[0];
+      if (firstRow) {
+        setSubPriceMonth(firstRow.price_month ?? "0.00");
+        setSubPriceThree(firstRow.price_three_months ?? "0.00");
+        setSubPriceAcademic(firstRow.price_academic_year ?? "0.00");
+        setSubPriceCalendar(firstRow.price_calendar_year ?? "0.00");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
     } finally {
@@ -90,6 +119,42 @@ export default function AdminSettingsPage() {
         },
       });
       setOk("Сохранено");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка сохранения");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveSubjectPrices() {
+    if (!token) return;
+    if (!subjectId) return;
+    setSaving(true);
+    setError(null);
+    setOk(null);
+    try {
+      await apiFetch("/api/admin/subscription-prices", {
+        method: "PUT",
+        token,
+        body: {
+          subject_id: subjectId,
+          price_month: subPriceMonth.trim() === "" ? "0" : subPriceMonth,
+          price_three_months: subPriceThree.trim() === "" ? "0" : subPriceThree,
+          price_academic_year: subPriceAcademic.trim() === "" ? "0" : subPriceAcademic,
+          price_calendar_year: subPriceCalendar.trim() === "" ? "0" : subPriceCalendar,
+        },
+      });
+      setOk("Цены по предметам сохранены");
+      // Подгружаем заново эффективные цены (с fallback).
+      const pr = await apiFetch<{ items: SubjectPriceRow[] }>("/api/admin/subscription-prices", { token });
+      setSubjectPriceRows(pr.items ?? []);
+      const row = (pr.items ?? []).find((x) => x.subject_id === subjectId);
+      if (row) {
+        setSubPriceMonth(row.price_month ?? "0.00");
+        setSubPriceThree(row.price_three_months ?? "0.00");
+        setSubPriceAcademic(row.price_academic_year ?? "0.00");
+        setSubPriceCalendar(row.price_calendar_year ?? "0.00");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка сохранения");
     } finally {
@@ -193,6 +258,81 @@ export default function AdminSettingsPage() {
           <div className={styles.actions}>
             <button type="button" className={uiStyles.btn} disabled={saving} onClick={() => void save()}>
               {saving ? "Сохранение…" : "Сохранить"}
+            </button>
+          </div>
+
+          <h2 className={styles.h2} style={{ marginTop: 8 }}>
+            Цены по предметам (₽)
+          </h2>
+
+          <label className={styles.label}>
+            <span className={styles.labelText}>Предмет</span>
+            <select className={uiStyles.select} value={subjectId} onChange={(e) => {
+              const next = e.target.value;
+              setSubjectId(next);
+              const row = subjectPriceRows.find((x) => x.subject_id === next);
+              if (!row) return;
+              setSubPriceMonth(row.price_month ?? "0.00");
+              setSubPriceThree(row.price_three_months ?? "0.00");
+              setSubPriceAcademic(row.price_academic_year ?? "0.00");
+              setSubPriceCalendar(row.price_calendar_year ?? "0.00");
+            }}>
+              {subjectPriceRows.map((r) => (
+                <option key={r.subject_id} value={r.subject_id}>
+                  {r.title}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.label}>
+            <span className={styles.labelText}>1 месяц</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              className={uiStyles.input}
+              value={subPriceMonth}
+              onChange={(e) => setSubPriceMonth(e.target.value)}
+              placeholder="0.00"
+            />
+          </label>
+          <label className={styles.label}>
+            <span className={styles.labelText}>3 месяца</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              className={uiStyles.input}
+              value={subPriceThree}
+              onChange={(e) => setSubPriceThree(e.target.value)}
+              placeholder="0.00"
+            />
+          </label>
+          <label className={styles.label}>
+            <span className={styles.labelText}>Учебный год</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              className={uiStyles.input}
+              value={subPriceAcademic}
+              onChange={(e) => setSubPriceAcademic(e.target.value)}
+              placeholder="0.00"
+            />
+          </label>
+          <label className={styles.label}>
+            <span className={styles.labelText}>Календарный год</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              className={uiStyles.input}
+              value={subPriceCalendar}
+              onChange={(e) => setSubPriceCalendar(e.target.value)}
+              placeholder="0.00"
+            />
+          </label>
+
+          <div className={styles.actions}>
+            <button type="button" className={uiStyles.btn} disabled={saving || !subjectId} onClick={() => void saveSubjectPrices()}>
+              {saving ? "Сохранение…" : "Сохранить цены по предмету"}
             </button>
           </div>
         </div>

@@ -16,14 +16,17 @@ type PlanRow = {
 
 type StatusPayload = {
   has_active_subscription: boolean;
+  has_active_general_subscription: boolean;
   admin_full_access: boolean;
   current_period: { ends_at: string | null; plan: string | null } | null;
+  current_general_period: { ends_at: string | null; plan: string | null } | null;
   free_tier: { topic_id: string | null; task_limit: number; free_task_ids: string[] };
 };
 
 export default function SubscriptionPage() {
   const token = useRequireAuth();
   const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [generalPlans, setGeneralPlans] = useState<PlanRow[]>([]);
   const [status, setStatus] = useState<StatusPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -33,10 +36,11 @@ export default function SubscriptionPage() {
     setError(null);
     try {
       const [p, s] = await Promise.all([
-        apiFetch<{ plans: PlanRow[] }>("/api/subscription/plans"),
+        apiFetch<{ subject_plans: PlanRow[]; general_plans: PlanRow[] }>(`/api/subscription/plans`),
         apiFetch<StatusPayload>("/api/subscription/status", { token }),
       ]);
-      setPlans(p.plans ?? []);
+      setPlans(p.subject_plans ?? []);
+      setGeneralPlans(p.general_plans ?? []);
       setStatus(s);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
@@ -47,15 +51,15 @@ export default function SubscriptionPage() {
     void load();
   }, [load]);
 
-  async function checkout(plan: string) {
+  async function checkout(plan: string, scope: "subject" | "general") {
     if (!token) return;
-    setBusy(plan);
+    setBusy(`${scope}:${plan}`);
     setError(null);
     try {
       const res = await apiFetch<{ redirect_url: string }>("/api/subscription/checkout", {
         method: "POST",
         token,
-        body: { plan },
+        body: { plan, scope },
       });
       window.location.href = res.redirect_url;
     } catch (e) {
@@ -65,7 +69,46 @@ export default function SubscriptionPage() {
     }
   }
 
-  const active = status?.has_active_subscription || status?.admin_full_access;
+  const adminFull = Boolean(status?.admin_full_access);
+  const hasSub = Boolean(status?.has_active_subscription);
+  const hasGeneral = Boolean(status?.has_active_general_subscription);
+
+  const currentSubjectPlan = status?.current_period?.plan ?? null;
+  const currentGeneralPlan = status?.current_general_period?.plan ?? null;
+
+  // Порядок “длины” тарифов: чтобы сравнивать “короче/длиннее”.
+  const planRank: Record<string, number> = {
+    month: 0,
+    three_months: 1,
+    academic_year: 2,
+    calendar_year: 3,
+  };
+
+  const currentSubjectRank = currentSubjectPlan ? planRank[currentSubjectPlan] : null;
+  const currentGeneralRank = currentGeneralPlan ? planRank[currentGeneralPlan] : null;
+
+  function isSubjectAlreadyActive(rowPlan: string): boolean {
+    if (adminFull) return true;
+    if (hasGeneral) return true; // общая покрывает все предметы
+    if (!hasSub) return false;
+    if (currentSubjectRank === null) return true;
+    const r = planRank[rowPlan];
+    if (r === undefined) return true;
+    return r <= currentSubjectRank;
+  }
+
+  function isGeneralAlreadyActive(rowPlan: string): boolean {
+    if (adminFull) return true;
+    if (!hasGeneral) return false;
+    if (currentGeneralRank === null) return true;
+    const r = planRank[rowPlan];
+    if (r === undefined) return true;
+    return r <= currentGeneralRank;
+  }
+
+  const active = hasSub || adminFull;
+  const subjectActiveEndsAt = status?.current_period?.ends_at ?? null;
+  const generalActiveEndsAt = status?.current_general_period?.ends_at ?? null;
 
   return (
     <AppShell title="Подписка">
@@ -76,19 +119,30 @@ export default function SubscriptionPage() {
           <h2 className="pt-heading" style={{ fontSize: "1.1rem", marginBottom: 8 }}>
             У вас есть полный доступ
           </h2>
-          {status?.current_period?.ends_at ? (
+          {generalActiveEndsAt ? (
             <p className="pt-muted" style={{ margin: 0 }}>
               Активный период до{" "}
-              {new Date(status.current_period.ends_at).toLocaleString("ru-RU", {
+              {new Date(generalActiveEndsAt).toLocaleString("ru-RU", {
                 dateStyle: "long",
                 timeStyle: "short",
               })}
-              {status.current_period.plan ? ` · тариф «${status.current_period.plan}»` : null}
+              {currentGeneralPlan ? ` · тариф «${currentGeneralPlan}» (общая)` : null}
             </p>
           ) : (
-            <p className="pt-muted" style={{ margin: 0 }}>
-              Администратор или активная подписка.
-            </p>
+            subjectActiveEndsAt ? (
+              <p className="pt-muted" style={{ margin: 0 }}>
+                Активный период до{" "}
+                {new Date(subjectActiveEndsAt).toLocaleString("ru-RU", {
+                  dateStyle: "long",
+                  timeStyle: "short",
+                })}
+                {currentSubjectPlan ? ` · тариф «${currentSubjectPlan}»` : null}
+              </p>
+            ) : (
+              <p className="pt-muted" style={{ margin: 0 }}>
+                Администратор или активная подписка.
+              </p>
+            )
           )}
         </div>
       ) : (
@@ -102,10 +156,10 @@ export default function SubscriptionPage() {
       )}
 
       <h2 className="pt-heading" style={{ fontSize: "1.1rem", marginBottom: 12 }}>
-        Тарифы
+        Предметные тарифы
       </h2>
       {!plans.length ? (
-        <p className="pt-muted">Тарифы не настроены на сервере (цены в переменных окружения).</p>
+        <p className="pt-muted">Предметные тарифы не настроены на сервере.</p>
       ) : (
         <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 12 }}>
           {plans.map((row) => (
@@ -121,10 +175,48 @@ export default function SubscriptionPage() {
               <button
                 type="button"
                 className="pt-btn pt-btn-primary"
-                disabled={!!busy || active}
-                onClick={() => void checkout(row.plan)}
+                disabled={!!busy || isSubjectAlreadyActive(row.plan)}
+                onClick={() => void checkout(row.plan, "subject")}
               >
-                {busy === row.plan ? "Переход…" : active ? "Уже активно" : "Оплатить"}
+                {busy === `subject:${row.plan}`
+                  ? "Переход…"
+                  : isSubjectAlreadyActive(row.plan)
+                    ? "Уже активно"
+                    : "Оплатить"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 className="pt-heading" style={{ fontSize: "1.1rem", marginBottom: 12, marginTop: 28 }}>
+        Общая подписка
+      </h2>
+      {!generalPlans.length ? (
+        <p className="pt-muted">Общая подписка не настроена на сервере.</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 12 }}>
+          {generalPlans.map((row) => (
+            <li key={`g:${row.plan}`} className="pt-card" style={{ padding: 16, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div className="pt-heading" style={{ fontSize: "1rem" }}>
+                  {row.label}
+                </div>
+                <div className="pt-muted" style={{ fontSize: "0.9rem" }}>
+                  {row.out_sum} {row.currency}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="pt-btn pt-btn-primary"
+                disabled={!!busy || isGeneralAlreadyActive(row.plan)}
+                onClick={() => void checkout(row.plan, "general")}
+              >
+                {busy === `general:${row.plan}`
+                  ? "Переход…"
+                  : isGeneralAlreadyActive(row.plan)
+                    ? "Уже активно"
+                    : "Оплатить"}
               </button>
             </li>
           ))}

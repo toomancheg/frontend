@@ -180,7 +180,7 @@ export default function DashboardPage() {
 
           <section className={`pt-card ${styles.reco}`}>
             <h3 className="pt-heading" style={{ fontSize: "1.05rem", marginBottom: 8 }}>
-              Рекомендации ИИ
+              Рекомендации
             </h3>
             <p style={{ marginBottom: 14 }}>
               {stats?.weak_topics?.length

@@ -64,6 +64,7 @@ function subjectAwarePath(path: string): string {
     "/api/exam/",
     "/api/dashboard/",
     "/api/admin/",
+    "/api/subscription/",
     "/api/ai/",
     "/api/users/me/progress-export",
   ] as const;

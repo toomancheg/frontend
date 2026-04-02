@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
@@ -26,6 +26,18 @@ type Task = {
 };
 
 type Mode = "explain" | "interactive" | "self";
+
+type SelfCheckState = {
+  source?: string;
+  check_id: string | null;
+  check_status: string | null;
+  photo_url: string;
+  answer_text: string;
+  result_text: string;
+  score: number | null;
+  dialog: { role: "user" | "assistant"; text: string }[];
+  task_progress_status?: string;
+};
 
 function normalizeLatexDelimiters(value: string): string {
   return value
@@ -143,7 +155,10 @@ export default function PracticeTaskPage() {
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
-  const [checkResult, setCheckResult] = useState<{ score: number; text: string } | null>(null);
+  const [checkResult, setCheckResult] = useState<{ score: number | null; text: string } | null>(null);
+  const [selfCheckDialog, setSelfCheckDialog] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
+  const [pollCheckId, setPollCheckId] = useState<string | null>(null);
+  const allowDraftSave = useRef(false);
 
   useEffect(() => {
     if (!token) return;
@@ -201,6 +216,17 @@ export default function PracticeTaskPage() {
 
   useEffect(() => {
     setOutput("");
+    setAnswer("");
+    setPhotoName(null);
+    setUploadedPhotoUrl(null);
+    setCheckResult(null);
+    setPollCheckId(null);
+    setSelfCheckDialog([]);
+    allowDraftSave.current = false;
+    setPhotoPreviewUrl((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return null;
+    });
   }, [taskId]);
 
   useEffect(() => {
@@ -262,6 +288,114 @@ export default function PracticeTaskPage() {
       cancelled = true;
     };
   }, [token, explainJobId]);
+
+  useEffect(() => {
+    if (mode !== "self" || !token || !taskId || task?.list_only === true) {
+      allowDraftSave.current = false;
+      return;
+    }
+    let cancelled = false;
+    allowDraftSave.current = false;
+    setPollCheckId(null);
+    (async () => {
+      try {
+        const data = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, { token });
+        if (cancelled) return;
+        setAnswer(data.answer_text ?? "");
+        const purl = (data.photo_url ?? "").trim();
+        if (purl) {
+          setUploadedPhotoUrl(purl);
+          setPhotoPreviewUrl(purl);
+          setPhotoName("Сохранённое фото");
+        } else {
+          setUploadedPhotoUrl(null);
+          setPhotoPreviewUrl(null);
+          setPhotoName(null);
+        }
+        if (data.check_status === "completed" && (data.result_text ?? "").trim()) {
+          setCheckResult({ score: data.score ?? null, text: data.result_text ?? "" });
+        } else {
+          setCheckResult(null);
+        }
+        if (data.check_status === "failed") {
+          setError((data.result_text ?? "").trim() || "Ошибка проверки");
+        } else if (!cancelled) {
+          setError(null);
+        }
+        const st = data.check_status;
+        if (st === "pending" || st === "running") {
+          setPollCheckId(data.check_id);
+        }
+        setSelfCheckDialog(Array.isArray(data.dialog) ? data.dialog : []);
+        allowDraftSave.current = true;
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Не удалось загрузить сохранённое решение");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, token, taskId, task?.list_only]);
+
+  useEffect(() => {
+    if (mode !== "self" || !token || !taskId || task?.list_only === true || !allowDraftSave.current) {
+      return;
+    }
+    const t = setTimeout(() => {
+      if (!allowDraftSave.current) return;
+      void apiFetch(`/api/practice/tasks/${taskId}/self-check-draft`, {
+        method: "PUT",
+        token,
+        body: { photo_url: uploadedPhotoUrl ?? "", answer_text: answer },
+      }).catch(() => {});
+    }, 600);
+    return () => clearTimeout(t);
+  }, [answer, uploadedPhotoUrl, mode, token, taskId, task?.list_only]);
+
+  useEffect(() => {
+    if (!token || !pollCheckId || !taskId || task?.list_only === true) return;
+    let cancelled = false;
+    type Poll = {
+      check_id: string;
+      status: string;
+      result_text?: string;
+      task_progress_status?: string;
+      score?: number | null;
+    };
+    (async () => {
+      for (let i = 0; i < 120 && !cancelled; i++) {
+        try {
+          const data = await apiFetch<Poll>(`/api/practice/solution-check/${pollCheckId}`, { token });
+          if (data.status === "completed") {
+            setCheckResult({ score: data.score ?? null, text: data.result_text ?? "" });
+            setPollCheckId(null);
+            setError(null);
+            try {
+              const s = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, { token });
+              if (!cancelled) setSelfCheckDialog(Array.isArray(s.dialog) ? s.dialog : []);
+            } catch {
+              /* ignore */
+            }
+            break;
+          }
+          if (data.status === "failed") {
+            setError(data.result_text?.trim() || "Ошибка проверки");
+            setPollCheckId(null);
+            setCheckResult(null);
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+        } catch {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, pollCheckId, taskId, task?.list_only]);
 
   async function explainMode() {
     if (!token || !taskId || activeMode) return;
@@ -330,6 +464,7 @@ export default function PracticeTaskPage() {
         status: string;
         result_text?: string;
         task_progress_status?: string;
+        score?: number | null;
       };
       const maxPolls = 120;
       for (let i = 0; i < maxPolls; i++) {
@@ -345,7 +480,13 @@ export default function PracticeTaskPage() {
           continue;
         }
         if (data.status === "completed") {
-          setCheckResult({ score: 4, text: data.result_text ?? "" });
+          setCheckResult({ score: data.score ?? null, text: data.result_text ?? "" });
+          try {
+            const s = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, { token });
+            setSelfCheckDialog(Array.isArray(s.dialog) ? s.dialog : []);
+          } catch {
+            /* ignore */
+          }
           return;
         }
         if (data.status === "failed") {
@@ -370,7 +511,7 @@ export default function PracticeTaskPage() {
     setUploadedPhotoUrl(null);
     setCheckResult(null);
 
-    if (photoPreviewUrl) {
+    if (photoPreviewUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(photoPreviewUrl);
     }
     const local = URL.createObjectURL(file);
@@ -386,6 +527,17 @@ export default function PracticeTaskPage() {
         body: form,
       });
       setUploadedPhotoUrl(uploaded.photo_url);
+      if (taskId) {
+        try {
+          await apiFetch(`/api/practice/tasks/${taskId}/self-check-draft`, {
+            method: "PUT",
+            token,
+            body: { photo_url: uploaded.photo_url, answer_text: answer },
+          });
+        } catch {
+          /* черновик — не блокируем загрузку */
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось загрузить фото");
     } finally {
@@ -417,11 +569,35 @@ export default function PracticeTaskPage() {
   const explainBlocks: ExplainStepBlock[] = output ? explainBlocksFromOutput(output) : [];
 
   const scoreClass =
-    checkResult && checkResult.score >= 4
-      ? styles.scoreGood
-      : checkResult && checkResult.score >= 3
-        ? styles.scoreMid
-        : styles.scoreBad;
+    checkResult?.score != null
+      ? checkResult.score >= 4
+        ? styles.scoreGood
+        : checkResult.score >= 3
+          ? styles.scoreMid
+          : styles.scoreBad
+      : styles.scoreMid;
+
+  async function resetSelfCheck() {
+    if (!token || !taskId || activeMode || photoUploading) return;
+    setError(null);
+    try {
+      await apiFetch(`/api/practice/tasks/${taskId}/self-check`, { method: "DELETE", token });
+      allowDraftSave.current = false;
+      setAnswer("");
+      setPhotoName(null);
+      setUploadedPhotoUrl(null);
+      setCheckResult(null);
+      setPollCheckId(null);
+      setSelfCheckDialog([]);
+      setPhotoPreviewUrl((prev) => {
+        if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return null;
+      });
+      allowDraftSave.current = true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось сбросить прогресс");
+    }
+  }
 
   const locked = task?.list_only === true;
 
@@ -570,9 +746,29 @@ export default function PracticeTaskPage() {
 
           {mode === "self" ? (
             <>
-              <h2 className="pt-heading" style={{ fontSize: "1.1rem", marginBottom: 12 }}>
-                Решение и проверка
-              </h2>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  marginBottom: 12,
+                }}
+              >
+                <h2 className="pt-heading" style={{ fontSize: "1.1rem", margin: 0 }}>
+                  Решение и проверка
+                </h2>
+                <button
+                  type="button"
+                  className="pt-btn pt-btn-secondary"
+                  style={{ padding: "8px 14px" }}
+                  onClick={() => void resetSelfCheck()}
+                  disabled={!!activeMode || photoUploading}
+                >
+                  Заново
+                </button>
+              </div>
               <label className={styles.label}>
                 <span className="pt-muted" style={{ fontSize: "0.85rem" }}>
                   Ответ (число / текст / формула)
@@ -612,6 +808,21 @@ export default function PracticeTaskPage() {
                   />
                 ) : null}
               </div>
+              {selfCheckDialog.length > 0 ? (
+                <div className={styles.chat} style={{ marginTop: 16 }}>
+                  <p className="pt-muted" style={{ fontSize: "0.85rem", margin: "0 0 8px" }}>
+                    Сохранённый диалог
+                  </p>
+                  {selfCheckDialog.map((m, i) => (
+                    <div
+                      key={i}
+                      className={`${styles.bubble} ${m.role === "assistant" ? styles["bubble-sys"] : styles["bubble-user"]}`}
+                    >
+                      <MathContent text={m.text} className={styles.chatMarkdown} />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="button"
                 className="pt-btn pt-btn-primary"
@@ -628,8 +839,10 @@ export default function PracticeTaskPage() {
               ) : null}
               {checkResult ? (
                 <div className="pt-card" style={{ marginTop: 16, padding: 16 }}>
-                  <div className={`${styles.score} ${scoreClass}`}>{checkResult.score} / 5</div>
-                  <div style={{ marginTop: 8 }}>
+                  {checkResult.score != null ? (
+                    <div className={`${styles.score} ${scoreClass}`}>{checkResult.score} / 5</div>
+                  ) : null}
+                  <div style={{ marginTop: checkResult.score != null ? 8 : 0 }}>
                     <MathContent text={checkResult.text} className={styles.markdownContent} />
                   </div>
                 </div>
