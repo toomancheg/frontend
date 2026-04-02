@@ -12,7 +12,7 @@ const NAV = [
   { href: "/admin", label: "Дашборд", short: "Дашборд" },
   { href: "/admin/users", label: "Пользователи", short: "Юзеры" },
   { href: "/admin/payments", label: "Платежи", short: "Оплаты" },
-  { href: "/admin/content", label: "Контент", short: "Теория" },
+  { href: "/admin/content", label: "Контент", short: "Контент" },
   { href: "/admin/stats", label: "Статистика", short: "Стат." },
   { href: "/admin/settings", label: "Настройки", short: "Настр." },
   { href: "/admin/logs", label: "Логи аудита", short: "Логи" },

@@ -124,7 +124,7 @@ export default function SubscriptionPage() {
                 disabled={!!busy || active}
                 onClick={() => void checkout(row.plan)}
               >
-                {busy === row.plan ? "Переход…" : active ? "Уже активно" : "Оплатить в Robokassa"}
+                {busy === row.plan ? "Переход…" : active ? "Уже активно" : "Оплатить"}
               </button>
             </li>
           ))}

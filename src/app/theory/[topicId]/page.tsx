@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { MathMarkdown } from "@/components/content/MathMarkdown";
 import { TheoryMarkdown } from "@/components/content/TheoryMarkdown";
 import { AppShell } from "@/components/layout/AppShell";
 import { SubjectLink } from "@/components/routing/SubjectLink";
@@ -263,7 +264,7 @@ export default function TheoryTopicPage() {
                 {quizQuestions.map((q) => (
                   <fieldset key={q.id} style={{ marginBottom: 20, border: "none", padding: 0 }}>
                     <legend className="pt-heading" style={{ fontSize: "0.95rem", marginBottom: 8 }}>
-                      {q.question}
+                      <MathMarkdown text={q.question} />
                     </legend>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {q.options.map((opt) => (
@@ -274,7 +275,9 @@ export default function TheoryTopicPage() {
                             checked={quizAnswers[q.id] === opt}
                             onChange={() => setQuizAnswers((a) => ({ ...a, [q.id]: opt }))}
                           />
-                          <span>{opt}</span>
+                          <span>
+                            <MathMarkdown text={opt} />
+                          </span>
                         </label>
                       ))}
                     </div>

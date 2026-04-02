@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
@@ -50,9 +51,9 @@ export function AdminGate({ children }: { children: ReactNode }) {
         {error ? (
           <p style={{ marginTop: 12, color: "#fca5a5" }}>
             {error}{" "}
-            <a href="/auth/login" style={{ color: "#e8ecf4", textDecoration: "underline" }}>
+            <Link href="/auth/login" style={{ color: "#e8ecf4", textDecoration: "underline" }}>
               Перейти к входу
-            </a>
+            </Link>
           </p>
         ) : null}
       </div>
