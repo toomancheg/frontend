@@ -1,0 +1,46 @@
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--adm-text);
+}
+
+.lead {
+  color: var(--adm-muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  max-width: 60rem;
+}
+
+.meta {
+  color: var(--adm-muted);
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.card {
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.01);
+  margin-bottom: 16px;
+}
+
+.err {
+  color: #f87171;
+}
+
+.ok {
+  color: #22c55e;
+}
+
