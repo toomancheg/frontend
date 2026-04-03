@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { MathMarkdown } from "@/components/content/MathMarkdown";
@@ -33,6 +33,7 @@ type Step = "idle" | "quiz" | "quiz_result";
 export default function TheoryTopicPage() {
   const params = useParams();
   const topicId = params.topicId as string;
+  const pathname = usePathname();
   const token = useRequireAuth();
   const [blocks, setBlocks] = useState<TheoryBlock[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -50,14 +51,17 @@ export default function TheoryTopicPage() {
     if (!topicId) return;
     (async () => {
       try {
-        const data = await apiFetch<TheoryBlock[]>(`/api/content/topics/${topicId}/theory-blocks`, { token });
+        const data = await apiFetch<TheoryBlock[]>(`/api/content/topics/${topicId}/theory-blocks`, {
+          token,
+          pathname,
+        });
         setBlocks(data);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Ошибка загрузки";
         setError(msg);
       }
     })();
-  }, [token, topicId]);
+  }, [token, topicId, pathname]);
 
   useEffect(() => {
     if (blocks[0]) setActiveSection(blocks[0].id);
@@ -79,6 +83,7 @@ export default function TheoryTopicPage() {
       try {
         const list = await apiFetch<QuizQuestion[]>(`/api/content/theory-blocks/${blockId}/quiz-questions`, {
           token,
+          pathname,
         });
         setQuizQuestions(list);
         setQuizAnswers({});
@@ -89,7 +94,7 @@ export default function TheoryTopicPage() {
         setQuizLoading(false);
       }
     },
-    [token]
+    [token, pathname]
   );
 
   const submitQuiz = useCallback(async () => {
@@ -102,6 +107,7 @@ export default function TheoryTopicPage() {
         {
           method: "POST",
           token,
+          pathname,
           body: { answers: quizAnswers },
         }
       );
@@ -112,7 +118,7 @@ export default function TheoryTopicPage() {
     } finally {
       setQuizLoading(false);
     }
-  }, [token, quizBlockId, quizAnswers]);
+  }, [token, quizBlockId, quizAnswers, pathname]);
 
   const activeBlock = blocks.find((b) => b.id === activeSection);
 

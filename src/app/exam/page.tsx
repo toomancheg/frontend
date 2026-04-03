@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
@@ -54,6 +55,7 @@ function TaskCondition({ text }: { text: string }) {
 
 export default function ExamPage() {
   const token = useRequireAuth();
+  const pathname = usePathname();
   const [tab, setTab] = useState<Tab>("create");
   const [exam, setExam] = useState<ExamSession | null>(null);
   const [examTasks, setExamTasks] = useState<Task[]>([]);
@@ -81,13 +83,13 @@ export default function ExamPage() {
     if (!token) return;
     (async () => {
       try {
-        const s = await apiFetch<SubStatus>("/api/subscription/status", { token });
+        const s = await apiFetch<SubStatus>("/api/subscription/status", { token, pathname });
         setSubStatus(s);
       } catch {
         setSubStatus(null);
       }
     })();
-  }, [token]);
+  }, [token, pathname]);
 
   const tick = useCallback(() => {
     if (!exam) return;
@@ -121,7 +123,7 @@ export default function ExamPage() {
     let cancelled = false;
     (async () => {
       try {
-        const all = await apiFetch<Task[]>("/api/content/tasks", { token });
+        const all = await apiFetch<Task[]>("/api/content/tasks", { token, pathname });
         const order = new Map(exam.task_ids.map((id, i) => [id, i]));
         const filtered = all
           .filter((t) => order.has(t.id))
@@ -143,7 +145,7 @@ export default function ExamPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, exam]);
+  }, [token, exam, pathname]);
 
   const submitExam = useCallback(async () => {
     if (!token || !exam || isSubmitting) return;
@@ -152,7 +154,7 @@ export default function ExamPage() {
     try {
       const data = await apiFetch<{ correct: number; total: number; recommendation: string }>(
         `/api/exam/${exam.id}/submit`,
-        { method: "POST", token, body: { answers } }
+        { method: "POST", token, pathname, body: { answers } }
       );
       setResult(data);
       setTab("results");
@@ -162,7 +164,7 @@ export default function ExamPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [token, exam, answers, isSubmitting]);
+  }, [token, exam, answers, isSubmitting, pathname]);
 
   useEffect(() => {
     if (tab !== "take" || !exam || secondsLeft > 0 || isSubmitting) return;
@@ -180,6 +182,7 @@ export default function ExamPage() {
       const data = await apiFetch<ExamSession>("/api/exam/start", {
         method: "POST",
         token,
+        pathname,
         body: { size, duration_minutes: duration },
       });
       setExam(data);

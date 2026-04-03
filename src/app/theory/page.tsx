@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
@@ -31,6 +32,7 @@ const DIFF_LABEL: Record<string, string> = {
 
 export default function TheoryListPage() {
   const token = useRequireAuth();
+  const pathname = usePathname();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<"order" | "difficulty" | "progress">("order");
@@ -40,13 +42,13 @@ export default function TheoryListPage() {
     if (!token) return;
     (async () => {
       try {
-        const data = await apiFetch<Topic[]>("/api/content/topics", { token });
+        const data = await apiFetch<Topic[]>("/api/content/topics", { token, pathname });
         setTopics(data);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка загрузки тем");
       }
     })();
-  }, [token]);
+  }, [token, pathname]);
 
   const sorted = useMemo(() => {
     let list = [...topics];

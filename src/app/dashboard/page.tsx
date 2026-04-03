@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
@@ -51,6 +51,7 @@ const PROGRAM_LABEL: Record<string, string> = {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<UserOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,9 +74,12 @@ export default function DashboardPage() {
         setUser(me);
         const fromDb = me.display_name?.trim();
         if (fromDb) setDisplayName(fromDb);
-        const dashboard = await apiFetch<DashboardStats>("/api/dashboard/stats", { token: accessToken });
+        const dashboard = await apiFetch<DashboardStats>("/api/dashboard/stats", {
+          token: accessToken,
+          pathname,
+        });
         setStats(dashboard);
-        const ts = await apiFetch<TopicOut[]>("/api/content/topics", { token: accessToken });
+        const ts = await apiFetch<TopicOut[]>("/api/content/topics", { token: accessToken, pathname });
         setTopics(ts);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Ошибка загрузки профиля");
@@ -84,7 +88,7 @@ export default function DashboardPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken]);
+  }, [accessToken, pathname]);
 
   async function onLogout() {
     try {

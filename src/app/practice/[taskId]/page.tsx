@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
@@ -43,6 +43,21 @@ function normalizeLatexDelimiters(value: string): string {
   return value
     .replace(/\\\[([\s\S]+?)\\\]/g, "$$$$1$$$$")
     .replace(/\\\(([\s\S]+?)\\\)/g, "$$$1$");
+}
+
+/**
+ * Backend диалога для self-check хранит фото как строку `Фото: <url>`.
+ * ReactMarkdown не умеет превращать такие "голые" URL в картинку,
+ * поэтому конвертируем в markdown image syntax.
+ */
+function convertPhotoUrlsToMarkdownImages(value: string): string {
+  // Пробуем обработать типичный формат:
+  // "Фото: https://.../something.png?X-Amz-...".
+  return value.replace(/(Фото\s*[:\-–—]\s*)(https?:\/\/[^\s]+)/giu, (match, prefix, rawUrl) => {
+    // Убираем возможные завершающие пунктуации, которые иногда прилипают к URL.
+    const url = String(rawUrl).replace(/[),.;:]+$/u, "");
+    return `${String(prefix).trim()} \n\n![](${url})`;
+  });
 }
 
 type ExplainStepBlock = { title: string; body: string };
@@ -130,9 +145,16 @@ function MathContent({ text, className }: { text: string; className?: string }) 
           ul: ({ children }) => <ul className={styles.markdownList}>{children}</ul>,
           ol: ({ children }) => <ol className={styles.markdownList}>{children}</ol>,
           li: ({ children }) => <li className={styles.markdownListItem}>{children}</li>,
+          img: ({ src, alt }) => (
+            <img
+              src={String(src)}
+              alt={alt ? String(alt) : "Фото"}
+              style={{ marginTop: 8, maxWidth: "100%", borderRadius: 12 }}
+            />
+          ),
         }}
       >
-        {normalizeLatexDelimiters(text)}
+        {convertPhotoUrlsToMarkdownImages(normalizeLatexDelimiters(text))}
       </ReactMarkdown>
     </div>
   );
@@ -140,6 +162,7 @@ function MathContent({ text, className }: { text: string; className?: string }) 
 
 export default function PracticeTaskPage() {
   const { taskId } = useParams<{ taskId: string }>();
+  const pathname = usePathname();
   const token = useRequireAuth();
   const [task, setTask] = useState<Task | null>(null);
   const [mode, setMode] = useState<Mode>("explain");
@@ -165,13 +188,13 @@ export default function PracticeTaskPage() {
     if (!taskId) return;
     (async () => {
       try {
-        const found = await apiGetOr404<Task>(`/api/content/tasks/${taskId}`, { token });
+        const found = await apiGetOr404<Task>(`/api/content/tasks/${taskId}`, { token, pathname });
         setTask(found);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка");
       }
     })();
-  }, [token, taskId]);
+  }, [token, taskId, pathname]);
 
   useEffect(() => {
     if (mode !== "interactive" || !token || !taskId || task?.list_only === true) {
@@ -192,6 +215,7 @@ export default function PracticeTaskPage() {
           {
             method: "POST",
             token,
+            pathname,
             body: { task_id: taskId },
           }
         );
@@ -206,7 +230,7 @@ export default function PracticeTaskPage() {
     return () => {
       cancelled = true;
     };
-  }, [mode, token, taskId, task?.list_only]);
+  }, [mode, token, taskId, task?.list_only, pathname]);
 
   useEffect(() => {
     if (mode !== "explain") {
@@ -236,7 +260,7 @@ export default function PracticeTaskPage() {
       try {
         const data = await apiGetOr404<{ explanation: string }>(
           `/api/practice/tasks/${taskId}/explain`,
-          { token }
+          { token, pathname }
         );
         if (cancelled || !data?.explanation) return;
         setOutput(data.explanation);
@@ -247,7 +271,7 @@ export default function PracticeTaskPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, taskId, mode]);
+  }, [token, taskId, mode, pathname]);
 
   useEffect(() => {
     if (!token || !explainJobId) return;
@@ -258,7 +282,7 @@ export default function PracticeTaskPage() {
         const data = await apiFetch<
           | { status: "pending" | "running"; job_id: string; task_id: string }
           | { status: "completed"; job_id: string; task_id: string; explanation: string }
-        >(`/api/practice/explain-jobs/${explainJobId}`, { token });
+        >(`/api/practice/explain-jobs/${explainJobId}`, { token, pathname });
         if (cancelled) return;
 
         if (data.status === "completed") {
@@ -287,7 +311,7 @@ export default function PracticeTaskPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, explainJobId]);
+  }, [token, explainJobId, pathname]);
 
   useEffect(() => {
     if (mode !== "self" || !token || !taskId || task?.list_only === true) {
@@ -299,7 +323,10 @@ export default function PracticeTaskPage() {
     setPollCheckId(null);
     (async () => {
       try {
-        const data = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, { token });
+        const data = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, {
+          token,
+          pathname,
+        });
         if (cancelled) return;
         setAnswer(data.answer_text ?? "");
         const purl = (data.photo_url ?? "").trim();
@@ -337,7 +364,7 @@ export default function PracticeTaskPage() {
     return () => {
       cancelled = true;
     };
-  }, [mode, token, taskId, task?.list_only]);
+  }, [mode, token, taskId, task?.list_only, pathname]);
 
   useEffect(() => {
     if (mode !== "self" || !token || !taskId || task?.list_only === true || !allowDraftSave.current) {
@@ -348,11 +375,12 @@ export default function PracticeTaskPage() {
       void apiFetch(`/api/practice/tasks/${taskId}/self-check-draft`, {
         method: "PUT",
         token,
+        pathname,
         body: { photo_url: uploadedPhotoUrl ?? "", answer_text: answer },
       }).catch(() => {});
     }, 600);
     return () => clearTimeout(t);
-  }, [answer, uploadedPhotoUrl, mode, token, taskId, task?.list_only]);
+  }, [answer, uploadedPhotoUrl, mode, token, taskId, task?.list_only, pathname]);
 
   useEffect(() => {
     if (!token || !pollCheckId || !taskId || task?.list_only === true) return;
@@ -367,13 +395,16 @@ export default function PracticeTaskPage() {
     (async () => {
       for (let i = 0; i < 120 && !cancelled; i++) {
         try {
-          const data = await apiFetch<Poll>(`/api/practice/solution-check/${pollCheckId}`, { token });
+          const data = await apiFetch<Poll>(`/api/practice/solution-check/${pollCheckId}`, { token, pathname });
           if (data.status === "completed") {
             setCheckResult({ score: data.score ?? null, text: data.result_text ?? "" });
             setPollCheckId(null);
             setError(null);
             try {
-              const s = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, { token });
+              const s = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, {
+                token,
+                pathname,
+              });
               if (!cancelled) setSelfCheckDialog(Array.isArray(s.dialog) ? s.dialog : []);
             } catch {
               /* ignore */
@@ -395,7 +426,7 @@ export default function PracticeTaskPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, pollCheckId, taskId, task?.list_only]);
+  }, [token, pollCheckId, taskId, task?.list_only, pathname]);
 
   async function explainMode() {
     if (!token || !taskId || activeMode) return;
@@ -408,6 +439,7 @@ export default function PracticeTaskPage() {
       >(`/api/practice/tasks/${taskId}/explain`, {
         method: "POST",
         token,
+        pathname,
       });
       if ("explanation" in data) {
         setOutput(data.explanation);
@@ -437,6 +469,7 @@ export default function PracticeTaskPage() {
       const step = await apiFetch<{ assistant_message: string }>("/api/practice/interactive/step", {
         method: "POST",
         token,
+        pathname,
         body: { session_id: interactiveSessionId, action, user_message: "" },
       });
       setChat((c) => [...c, { role: "sys", text: step.assistant_message }]);
@@ -456,6 +489,7 @@ export default function PracticeTaskPage() {
       const started = await apiFetch<{ check_id: string; status: string }>("/api/practice/solution-check", {
         method: "POST",
         token,
+        pathname,
         body: { task_id: taskId, photo_url: uploadedPhotoUrl, answer_text: answer },
       });
       const checkId = started.check_id;
@@ -470,7 +504,7 @@ export default function PracticeTaskPage() {
       for (let i = 0; i < maxPolls; i++) {
         let data: Poll;
         try {
-          data = await apiFetch<Poll>(`/api/practice/solution-check/${checkId}`, { token });
+          data = await apiFetch<Poll>(`/api/practice/solution-check/${checkId}`, { token, pathname });
         } catch (e) {
           if (i === maxPolls - 1) {
             throw e;
@@ -482,7 +516,10 @@ export default function PracticeTaskPage() {
         if (data.status === "completed") {
           setCheckResult({ score: data.score ?? null, text: data.result_text ?? "" });
           try {
-            const s = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, { token });
+            const s = await apiFetch<SelfCheckState>(`/api/practice/tasks/${taskId}/self-check-state`, {
+              token,
+              pathname,
+            });
             setSelfCheckDialog(Array.isArray(s.dialog) ? s.dialog : []);
           } catch {
             /* ignore */
@@ -524,6 +561,7 @@ export default function PracticeTaskPage() {
     try {
       const uploaded = await apiFetchForm<{ photo_url: string }>("/api/practice/solution-photo/upload", {
         token,
+        pathname,
         body: form,
       });
       setUploadedPhotoUrl(uploaded.photo_url);
@@ -532,6 +570,7 @@ export default function PracticeTaskPage() {
           await apiFetch(`/api/practice/tasks/${taskId}/self-check-draft`, {
             method: "PUT",
             token,
+            pathname,
             body: { photo_url: uploaded.photo_url, answer_text: answer },
           });
         } catch {
@@ -556,6 +595,7 @@ export default function PracticeTaskPage() {
       const step = await apiFetch<{ assistant_message: string }>("/api/practice/interactive/step", {
         method: "POST",
         token,
+        pathname,
         body: { session_id: interactiveSessionId, action: "message", user_message: msg },
       });
       setChat((c) => [...c, { role: "sys", text: step.assistant_message }]);
@@ -581,7 +621,7 @@ export default function PracticeTaskPage() {
     if (!token || !taskId || activeMode || photoUploading) return;
     setError(null);
     try {
-      await apiFetch(`/api/practice/tasks/${taskId}/self-check`, { method: "DELETE", token });
+      await apiFetch(`/api/practice/tasks/${taskId}/self-check`, { method: "DELETE", token, pathname });
       allowDraftSave.current = false;
       setAnswer("");
       setPhotoName(null);
@@ -660,7 +700,7 @@ export default function PracticeTaskPage() {
           {mode === "explain" ? (
             <>
               <h2 className="pt-heading" style={{ fontSize: "1.1rem", marginBottom: 12 }}>
-                Решение от ИИ-наставника
+                Решение от наставника
               </h2>
               {output.trim().length === 0 ? (
                 <button

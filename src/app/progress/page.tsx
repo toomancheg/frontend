@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
@@ -41,6 +42,7 @@ const SOLVED_STATUSES = new Set(["solved", "quiz_passed"]);
 
 export default function ProgressPage() {
   const token = useRequireAuth();
+  const pathname = usePathname();
 
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [topics, setTopics] = useState<Topic[] | null>(null);
@@ -54,9 +56,9 @@ export default function ProgressPage() {
     (async () => {
       try {
         const [t, tp, p] = await Promise.all([
-          apiFetch<Task[]>("/api/content/tasks", { token }),
-          apiFetch<Topic[]>("/api/content/topics", { token }),
-          apiFetch<ProgressExportPayload>("/api/users/me/progress-export", { token }),
+          apiFetch<Task[]>("/api/content/tasks", { token, pathname }),
+          apiFetch<Topic[]>("/api/content/topics", { token, pathname }),
+          apiFetch<ProgressExportPayload>("/api/users/me/progress-export", { token, pathname }),
         ]);
 
         if (cancelled) return;
@@ -72,7 +74,7 @@ export default function ProgressPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, pathname]);
 
   const derived = useMemo(() => {
     if (!tasks || !topics || !progress) return null;

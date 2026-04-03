@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { SubjectLink } from "@/components/routing/SubjectLink";
@@ -41,10 +42,74 @@ type ProgressExportPayload = {
     status: string;
     attempts: number;
     hints_used: number;
+    explanation_seen?: boolean;
+    self_check_draft?: boolean;
   }>;
 };
 
 type SortKey = "title_asc" | "difficulty_asc" | "difficulty_desc" | "topic_order_asc";
+
+type TaskProgressRow = {
+  status: string;
+  attempts: number;
+  hints_used: number;
+  explanation_seen: boolean;
+  self_check_draft: boolean;
+};
+
+function isPracticeListPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (pathname === "/practice" || pathname === "/practice/") return true;
+  return /^\/[a-z][a-z0-9_-]*\/practice\/?$/i.test(pathname);
+}
+
+function isSolvedStatus(st: string): boolean {
+  return st === "solved" || st === "quiz_passed";
+}
+
+function segment(icon: "✅" | "⏳" | "🔴", text: string): string {
+  return `${icon} ${text}`;
+}
+
+/**
+ * Подпись статуса для списка задач в формате:
+ * explain / interactive / self-check
+ */
+function formatTaskProgressLabel(row: TaskProgressRow | undefined): string {
+  if (!row) {
+    return segment("🔴", "не решено");
+  }
+
+  const st = row.status;
+  const solved = isSolvedStatus(st);
+  const hints = row.hints_used ?? 0;
+  const attempts = row.attempts ?? 0;
+
+  // Если решено без объяснений и без подсказок — считаем "самостоятельно".
+  if (solved && !row.explanation_seen && hints === 0) {
+    return segment("✅", "Решено самостоятельно");
+  }
+
+  // 1) Explain
+  const explainSeg = row.explanation_seen ? segment("✅", "даны объяснения") : segment("🔴", "не решено");
+
+  // 2) Interactive (признак "в процессе" — были попытки/подсказки и задача ещё не решена)
+  const interactiveInProgress = !solved && (attempts > 0 || hints > 0) && !row.self_check_draft;
+  const interactiveSeg = solved
+    ? segment("✅", hints > 0 ? "решено с подсказками" : "решено")
+    : interactiveInProgress
+      ? segment("⏳", "в процессе")
+      : segment("🔴", "не решено");
+
+  // 3) Self-check
+  const selfSeg = solved
+    ? segment("✅", "решено")
+    : row.self_check_draft
+      ? segment("⏳", "в процессе")
+      : segment("🔴", "не решено");
+
+  return `${explainSeg} / ${interactiveSeg} / ${selfSeg}`;
+}
 
 export default function PracticeListPage() {
   const token = useRequireAuth();
@@ -61,11 +126,13 @@ export default function PracticeListPage() {
   const [view, setView] = useState<"list" | "grid">("list");
   const [q, setQ] = useState("");
 
+  const pathname = usePathname();
+
   useEffect(() => {
     if (!token) return;
     (async () => {
       try {
-        const data = await apiFetch<Task[]>("/api/content/tasks", { token });
+        const data = await apiFetch<Task[]>("/api/content/tasks", { token, pathname });
         setTasks(data);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка загрузки");
@@ -73,13 +140,13 @@ export default function PracticeListPage() {
         setLoading(false);
       }
     })();
-  }, [token]);
+  }, [token, pathname]);
 
   useEffect(() => {
     if (!token) return;
     (async () => {
       try {
-        const list = await apiFetch<Topic[]>("/api/content/topics", { token });
+        const list = await apiFetch<Topic[]>("/api/content/topics", { token, pathname });
         setTopics(list);
         // "all" оставляем по умолчанию; если тем нет — просто показываем пустой селект.
       } catch (e) {
@@ -88,28 +155,36 @@ export default function PracticeListPage() {
         setTopicsLoading(false);
       }
     })();
-  }, [token]);
+  }, [token, pathname]);
 
   const [progressLoading, setProgressLoading] = useState(true);
-  const [progressStatusByTaskId, setProgressStatusByTaskId] = useState<Record<string, string>>({});
+  const [progressByTaskId, setProgressByTaskId] = useState<Record<string, TaskProgressRow>>({});
   useEffect(() => {
     if (!token) return;
+    if (!isPracticeListPath(pathname)) return;
+    setProgressLoading(true);
     (async () => {
       try {
-        const data = await apiFetch<ProgressExportPayload>("/api/users/me/progress-export", { token });
-        const map: Record<string, string> = {};
+        const data = await apiFetch<ProgressExportPayload>("/api/users/me/progress-export", { token, pathname });
+        const map: Record<string, TaskProgressRow> = {};
         for (const row of data.progress) {
-          map[row.task_id] = row.status;
+          map[row.task_id] = {
+            status: row.status,
+            attempts: row.attempts ?? 0,
+            hints_used: row.hints_used ?? 0,
+            explanation_seen: row.explanation_seen === true,
+            self_check_draft: row.self_check_draft === true,
+          };
         }
-        setProgressStatusByTaskId(map);
+        setProgressByTaskId(map);
       } catch {
         // Если прогресс не удалось загрузить — позволяем хотя бы diff+поиск фильтровать.
-        setProgressStatusByTaskId({});
+        setProgressByTaskId({});
       } finally {
         setProgressLoading(false);
       }
     })();
-  }, [token]);
+  }, [token, pathname]);
 
   const topicOrderIndexById = useMemo(() => {
     const m: Record<string, number> = {};
@@ -123,9 +198,8 @@ export default function PracticeListPage() {
     if (topic !== "all") list = list.filter((t) => t.topic_id === topic);
 
     if (status !== "all" && !progressLoading) {
-      const isSolvedStatus = (st: string) => st === "solved" || st === "quiz_passed";
       list = list.filter((t) => {
-        const st = progressStatusByTaskId[t.id] ?? "not_solved";
+        const st = progressByTaskId[t.id]?.status ?? "not_solved";
         const solved = isSolvedStatus(st);
         return status === "solved" ? solved : !solved;
       });
@@ -133,7 +207,7 @@ export default function PracticeListPage() {
 
     if (mode !== "all" && !progressLoading) {
       list = list.filter((t) => {
-        const st = progressStatusByTaskId[t.id] ?? "not_solved";
+        const st = progressByTaskId[t.id]?.status ?? "not_solved";
         if (mode === "interactive") return st === "in_progress";
         if (mode === "self") return st === "solved" || st === "quiz_passed";
         // explain: задача не стартовала в интерактиве и не считается решенной
@@ -174,7 +248,7 @@ export default function PracticeListPage() {
     mode,
     sort,
     progressLoading,
-    progressStatusByTaskId,
+    progressByTaskId,
     topicOrderIndexById,
   ]);
 
@@ -284,7 +358,9 @@ export default function PracticeListPage() {
                 <div className={styles.tags}>
                   <span className="pt-muted">механика</span>
                   <span className={`${styles.diff} ${styles[`diff-${t.difficulty}`]}`}>{t.difficulty}</span>
-                  <span>🔴 не решено</span>
+                  <span className="pt-muted">
+                    {progressLoading ? "…" : formatTaskProgressLabel(progressByTaskId[t.id])}
+                  </span>
                 </div>
               </div>
               <SubjectLink
@@ -303,6 +379,9 @@ export default function PracticeListPage() {
               <div className={styles.taskTitle}>{t.title}</div>
               <p className="pt-muted" style={{ fontSize: "0.85rem", margin: "8px 0" }}>
                 {t.list_only === true ? "Доступ по подписке…" : `${t.condition_text.slice(0, 80)}…`}
+              </p>
+              <p className="pt-muted" style={{ fontSize: "0.8rem", marginBottom: 8 }}>
+                {progressLoading ? "…" : formatTaskProgressLabel(progressByTaskId[t.id])}
               </p>
               <SubjectLink
                 href={t.list_only === true ? "/subscription" : `/practice/${t.id}`}

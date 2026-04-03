@@ -49,8 +49,16 @@ function getSubjectPrefixFromLocation(): string {
   return getSubjectPrefixFromPathname(window.location.pathname || "");
 }
 
-function subjectAwarePath(path: string): string {
-  const prefix = getSubjectPrefixFromLocation();
+/** Префикс `/{subject}` для subject-aware API; `pathname` — из `usePathname()` (предпочтительно для всех предметов). */
+export function getSubjectApiPrefix(pathnameOverride?: string | null): string {
+  if (pathnameOverride !== undefined && pathnameOverride !== null && pathnameOverride !== "") {
+    return getSubjectPrefixFromPathname(pathnameOverride);
+  }
+  return getSubjectPrefixFromLocation();
+}
+
+function subjectAwarePath(path: string, pathnameOverride?: string | null): string {
+  const prefix = getSubjectApiPrefix(pathnameOverride);
   if (!prefix) return path;
   if (!path.startsWith("/api/")) return path;
 
@@ -104,10 +112,12 @@ export async function apiFetch<T>(
     method?: HttpMethod;
     token?: string | null;
     body?: unknown;
+    /** Текущий URL страницы (например из usePathname), чтобы API шло на `/{предмет}/api/...` для математики, химии и т.д. */
+    pathname?: string | null;
   } = {}
 ): Promise<T> {
   const base = getApiBaseUrl();
-  const url = `${base}${subjectAwarePath(path)}`;
+  const url = `${base}${subjectAwarePath(path, opts.pathname)}`;
 
   let res: Response;
   try {
@@ -171,9 +181,12 @@ export async function apiFetch<T>(
  * GET-запрос: при ответе 404 возвращает null (без исключения).
  * Остальные коды ошибок — как у apiFetch.
  */
-export async function apiGetOr404<T>(path: string, opts: { token?: string | null } = {}): Promise<T | null> {
+export async function apiGetOr404<T>(
+  path: string,
+  opts: { token?: string | null; pathname?: string | null } = {}
+): Promise<T | null> {
   const base = getApiBaseUrl();
-  const url = `${base}${subjectAwarePath(path)}`;
+  const url = `${base}${subjectAwarePath(path, opts.pathname)}`;
 
   async function doFetch(access: string | null): Promise<Response> {
     return fetch(url, {
@@ -230,10 +243,10 @@ export async function apiGetOr404<T>(path: string, opts: { token?: string | null
 /** Скачивание бинарного ответа (CSV, PDF) с Bearer-токеном. */
 export async function apiFetchBlob(
   path: string,
-  opts: { token?: string | null } = {}
+  opts: { token?: string | null; pathname?: string | null } = {}
 ): Promise<Blob> {
   const base = getApiBaseUrl();
-  const url = `${base}${subjectAwarePath(path)}`;
+  const url = `${base}${subjectAwarePath(path, opts.pathname)}`;
 
   let res: Response;
   try {
@@ -263,10 +276,10 @@ export async function apiFetchBlob(
 
 export async function apiFetchForm<T>(
   path: string,
-  opts: { token?: string | null; body: FormData }
+  opts: { token?: string | null; body: FormData; pathname?: string | null }
 ): Promise<T> {
   const base = getApiBaseUrl();
-  const url = `${base}${subjectAwarePath(path)}`;
+  const url = `${base}${subjectAwarePath(path, opts.pathname)}`;
 
   let res: Response;
   try {
